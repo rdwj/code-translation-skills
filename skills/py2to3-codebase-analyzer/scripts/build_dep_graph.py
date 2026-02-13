@@ -13,6 +13,7 @@ Usage:
 
 Outputs:
     <output_dir>/dependency-graph.json
+    <output_dir>/dependency-graph.html  (interactive visualization)
     <output_dir>/migration-order.json
 """
 
@@ -340,6 +341,33 @@ def identify_special_modules(graph: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def generate_html_visualization(graph_data: Dict[str, Any], output_dir: str) -> None:
+    """Generate an interactive HTML visualization of the dependency graph.
+    
+    Reads the HTML template from assets/dependency-graph-template.html,
+    injects the graph JSON data, and writes dependency-graph.html to the
+    output directory.
+    """
+    # Locate the template relative to this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    template_path = os.path.join(script_dir, "..", "assets", "dependency-graph-template.html")
+    
+    if not os.path.exists(template_path):
+        print(f"Warning: HTML template not found at {template_path}, skipping visualization")
+        return
+    
+    with open(template_path, "r", encoding="utf-8") as f:
+        template = f.read()
+    
+    data_json = json.dumps(graph_data, indent=2, default=str)
+    html = template.replace("{{GRAPH_DATA_JSON}}", data_json, 1)
+    
+    html_path = os.path.join(output_dir, "dependency-graph.html")
+    with open(html_path, "w", encoding="utf-8") as f:
+        f.write(html)
+    print(f"Wrote {html_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Build dependency graph from codebase scan")
     parser.add_argument("raw_scan", help="Path to raw-scan.json from analyze.py")
@@ -401,6 +429,9 @@ def main():
     with open(order_path, "w") as f:
         json.dump(order_output, f, indent=2, default=str)
     print(f"Wrote {order_path}")
+    
+    # Generate interactive HTML visualization
+    generate_html_visualization(graph_output, args.output)
     
     # Print summary
     print(f"\n{'='*60}")

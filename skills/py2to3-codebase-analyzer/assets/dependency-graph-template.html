@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dependency Graph — py2to3 Migration</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e1e4e8; overflow: hidden; }
+  #canvas { width: 100vw; height: 100vh; display: block; }
+
+  /* Legend */
+  #legend {
+    position: fixed; top: 16px; left: 16px; background: rgba(22,27,34,0.92);
+    border: 1px solid #30363d; border-radius: 10px; padding: 14px 18px;
+    font-size: 13px; z-index: 10; backdrop-filter: blur(8px);
+    max-width: 220px;
+  }
+  #legend h3 { font-size: 14px; margin-bottom: 10px; color: #f0f3f6; font-weight: 600; }
+  .legend-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed; display: none; background: rgba(22,27,34,0.96);
+    border: 1px solid #30363d; border-radius: 8px; padding: 12px 16px;
+    font-size: 13px; z-index: 20; pointer-events: none;
+    backdrop-filter: blur(8px); max-width: 320px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  #tooltip h4 { color: #58a6ff; margin-bottom: 6px; font-size: 14px; }
+  #tooltip .meta { color: #8b949e; line-height: 1.6; }
+  #tooltip .meta span { color: #c9d1d9; }
+  #tooltip .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 4px; }
+  .badge-leaf { background: #1f3d2a; color: #56d364; }
+  .badge-gateway { background: #3d2a1f; color: #f0883e; }
+  .badge-orphan { background: #2d1f3d; color: #bc8cff; }
+
+  /* Info panel */
+  #info {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(22,27,34,0.85); border: 1px solid #30363d; border-radius: 8px;
+    padding: 8px 18px; font-size: 12px; color: #8b949e; z-index: 10;
+    backdrop-filter: blur(8px);
+  }
+  #info kbd { background: #21262d; border: 1px solid #30363d; border-radius: 3px; padding: 1px 5px; font-size: 11px; color: #c9d1d9; }
+
+  /* Stats */
+  #stats {
+    position: fixed; top: 16px; right: 16px; background: rgba(22,27,34,0.92);
+    border: 1px solid #30363d; border-radius: 10px; padding: 14px 18px;
+    font-size: 13px; z-index: 10; backdrop-filter: blur(8px);
+  }
+  #stats h3 { font-size: 14px; margin-bottom: 8px; color: #f0f3f6; font-weight: 600; }
+  .stat-row { display: flex; justify-content: space-between; gap: 20px; margin: 4px 0; color: #8b949e; }
+  .stat-row span:last-child { color: #c9d1d9; font-weight: 500; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="legend">
+  <h3>Packages</h3>
+  <div id="legend-items"></div>
+  <div style="margin-top:10px;border-top:1px solid #30363d;padding-top:8px;">
+    <div class="legend-row"><div class="legend-swatch" style="border:2px solid #f0883e;background:transparent;border-radius:50%;"></div> Gateway module</div>
+    <div class="legend-row"><div class="legend-swatch" style="border:2px dashed #bc8cff;background:transparent;border-radius:50%;"></div> Orphan module</div>
+    <div class="legend-row"><div class="legend-swatch" style="background:#30363d;border-radius:50%;width:8px;height:8px;margin:3px;"></div> Leaf module (no deps)</div>
+  </div>
+</div>
+
+<div id="stats">
+  <h3>Graph Stats</h3>
+  <div id="stats-content"></div>
+</div>
+
+<div id="tooltip"></div>
+<div id="info">Drag nodes to rearrange · Scroll to zoom · <kbd>Click</kbd> a node to highlight its connections</div>
+
+<script>
+const DATA = {{GRAPH_DATA_JSON}};
+
+// Color palette — auto-generated from package names
+const PALETTE_COLORS = [
+  '#58a6ff', '#bc8cff', '#f778ba', '#56d364',
+  '#f0883e', '#ffd33d', '#ff7b72', '#79c0ff',
+  '#d2a8ff', '#7ee787', '#ffa657', '#ff9bce',
+];
+const packageNames = [...new Set(DATA.nodes.map(n => n.package))];
+const PALETTE = Object.fromEntries(packageNames.map((p, i) => [p, PALETTE_COLORS[i % PALETTE_COLORS.length]]));
+
+const gatewayIds = new Set(DATA.gateway_modules.map(g => g.id));
+const orphanIds  = new Set(DATA.orphan_modules.map(o => o.id));
+const gatewayMap = Object.fromEntries(DATA.gateway_modules.map(g => [g.id, g]));
+const orphanMap  = Object.fromEntries(DATA.orphan_modules.map(o => [o.id, o]));
+
+// Build legend
+const legendEl = document.getElementById('legend-items');
+Object.entries(PALETTE).forEach(([pkg, color]) => {
+  const row = document.createElement('div');
+  row.className = 'legend-row';
+  row.innerHTML = `<div class="legend-swatch" style="background:${color}"></div> ${pkg}`;
+  legendEl.appendChild(row);
+});
+
+// Stats
+const statsEl = document.getElementById('stats-content');
+const totalLines = DATA.nodes.reduce((s,n) => s + n.lines, 0);
+statsEl.innerHTML = `
+  <div class="stat-row"><span>Modules</span><span>${DATA.nodes.length}</span></div>
+  <div class="stat-row"><span>Edges</span><span>${DATA.edges.length}</span></div>
+  <div class="stat-row"><span>Packages</span><span>${DATA.clusters.length}</span></div>
+  <div class="stat-row"><span>Total lines</span><span>${totalLines.toLocaleString()}</span></div>
+  <div class="stat-row"><span>Gateway modules</span><span>${DATA.gateway_modules.length}</span></div>
+  <div class="stat-row"><span>Orphan modules</span><span>${DATA.orphan_modules.length}</span></div>
+`;
+
+// ── Canvas setup ──
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Simulation state ──
+let camX = 0, camY = 0, camScale = 1;
+let nodes = DATA.nodes.map((n, i) => {
+  const clusterIdx = DATA.clusters.findIndex(c => c.modules.includes(n.id));
+  const cluster = DATA.clusters[clusterIdx] || { name: 'unknown' };
+  const angle = (clusterIdx / DATA.clusters.length) * Math.PI * 2 - Math.PI/2;
+  const clusterMembers = cluster.modules || [];
+  const memberIdx = clusterMembers.indexOf(n.id);
+  const spread = 60 + clusterMembers.length * 12;
+  const subAngle = (memberIdx / clusterMembers.length) * Math.PI * 2;
+  const cx = Math.cos(angle) * 220;
+  const cy = Math.sin(angle) * 220;
+  return {
+    ...n,
+    x: cx + Math.cos(subAngle) * spread + (Math.random()-0.5)*20,
+    y: cy + Math.sin(subAngle) * spread + (Math.random()-0.5)*20,
+    vx: 0, vy: 0,
+    r: Math.max(6, Math.sqrt(n.lines) * 0.7),
+    color: PALETTE[n.package] || '#8b949e',
+    clusterIdx,
+  };
+});
+const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]));
+let edges = DATA.edges.map(e => ({ ...e, source: nodeMap[e.from], target: nodeMap[e.to] }));
+
+// ── Force simulation ──
+function simulate() {
+  const alpha = 0.3, friction = 0.88;
+
+  // Repulsion
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i+1; j < nodes.length; j++) {
+      let dx = nodes[j].x - nodes[i].x;
+      let dy = nodes[j].y - nodes[i].y;
+      let d2 = dx*dx + dy*dy;
+      if (d2 < 1) d2 = 1;
+      const f = 1200 / d2;
+      const fx = dx / Math.sqrt(d2) * f;
+      const fy = dy / Math.sqrt(d2) * f;
+      nodes[i].vx -= fx; nodes[i].vy -= fy;
+      nodes[j].vx += fx; nodes[j].vy += fy;
+    }
+  }
+
+  // Attraction along edges
+  for (const e of edges) {
+    const dx = e.target.x - e.source.x;
+    const dy = e.target.y - e.source.y;
+    const d = Math.sqrt(dx*dx + dy*dy) || 1;
+    const f = (d - 80) * 0.008;
+    const fx = dx/d * f;
+    const fy = dy/d * f;
+    e.source.vx += fx; e.source.vy += fy;
+    e.target.vx -= fx; e.target.vy -= fy;
+  }
+
+  // Cluster gravity
+  const clusterCenters = {};
+  for (const n of nodes) {
+    if (!clusterCenters[n.clusterIdx]) clusterCenters[n.clusterIdx] = { x:0,y:0,count:0 };
+    clusterCenters[n.clusterIdx].x += n.x;
+    clusterCenters[n.clusterIdx].y += n.y;
+    clusterCenters[n.clusterIdx].count++;
+  }
+  for (const k in clusterCenters) {
+    clusterCenters[k].x /= clusterCenters[k].count;
+    clusterCenters[k].y /= clusterCenters[k].count;
+  }
+  for (const n of nodes) {
+    const cc = clusterCenters[n.clusterIdx];
+    n.vx += (cc.x - n.x) * 0.005;
+    n.vy += (cc.y - n.y) * 0.005;
+  }
+
+  // Center gravity
+  for (const n of nodes) {
+    n.vx -= n.x * 0.0005;
+    n.vy -= n.y * 0.0005;
+  }
+
+  // Integrate
+  for (const n of nodes) {
+    if (n === dragNode) continue;
+    n.vx *= friction; n.vy *= friction;
+    n.x += n.vx * alpha;
+    n.y += n.vy * alpha;
+  }
+}
+
+// ── Drawing ──
+let selectedNode = null;
+let hoverNode = null;
+
+function screenToWorld(sx, sy) {
+  return { x: (sx - W/2)/camScale + camX, y: (sy - H/2)/camScale + camY };
+}
+function worldToScreen(wx, wy) {
+  return { x: (wx - camX)*camScale + W/2, y: (wy - camY)*camScale + H/2 };
+}
+
+function drawArrow(x1, y1, x2, y2, color, width, alpha) {
+  const dx = x2-x1, dy = y2-y1;
+  const len = Math.sqrt(dx*dx+dy*dy);
+  if (len < 1) return;
+  const ux = dx/len, uy = dy/len;
+  const targetR = 8;
+  const ex = x2 - ux*targetR, ey = y2 - uy*targetR;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(ex, ey);
+  ctx.stroke();
+
+  const headLen = 6 * width;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(ex, ey);
+  ctx.lineTo(ex - ux*headLen - uy*headLen*0.4, ey - uy*headLen + ux*headLen*0.4);
+  ctx.lineTo(ex - ux*headLen + uy*headLen*0.4, ey - uy*headLen - ux*headLen*0.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.scale(camScale, camScale);
+  ctx.translate(-camX, -camY);
+
+  // Determine highlighted set
+  const highlightSet = new Set();
+  const highlightEdges = new Set();
+  if (selectedNode) {
+    highlightSet.add(selectedNode.id);
+    for (const e of edges) {
+      if (e.source.id === selectedNode.id || e.target.id === selectedNode.id) {
+        highlightSet.add(e.source.id);
+        highlightSet.add(e.target.id);
+        highlightEdges.add(e);
+      }
+    }
+  }
+
+  // Draw cluster hulls
+  const clusterGroups = {};
+  for (const n of nodes) {
+    if (!clusterGroups[n.clusterIdx]) clusterGroups[n.clusterIdx] = [];
+    clusterGroups[n.clusterIdx].push(n);
+  }
+  for (const [idx, group] of Object.entries(clusterGroups)) {
+    if (group.length < 2) continue;
+    const cx = group.reduce((s,n) => s+n.x, 0) / group.length;
+    const cy = group.reduce((s,n) => s+n.y, 0) / group.length;
+    let maxR = 0;
+    for (const n of group) {
+      const d = Math.sqrt((n.x-cx)**2 + (n.y-cy)**2) + n.r + 20;
+      if (d > maxR) maxR = d;
+    }
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = group[0].color;
+    ctx.beginPath();
+    ctx.arc(cx, cy, maxR, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha = 0.15;
+    ctx.strokeStyle = group[0].color;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Cluster label
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = group[0].color;
+    ctx.font = 'bold 11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(DATA.clusters[idx]?.name?.toUpperCase() || '', cx, cy - maxR + 6);
+    ctx.restore();
+  }
+
+  // Draw edges
+  for (const e of edges) {
+    const isHighlighted = highlightEdges.has(e);
+    const dimmed = selectedNode && !isHighlighted;
+    const alpha = dimmed ? 0.07 : (isHighlighted ? 0.7 : 0.2);
+    const width = isHighlighted ? 1.5 : 0.8;
+    const color = isHighlighted ? e.source.color : '#30363d';
+    drawArrow(e.source.x, e.source.y, e.target.x, e.target.y, color, width, alpha);
+  }
+
+  // Draw nodes
+  for (const n of nodes) {
+    const dimmed = selectedNode && !highlightSet.has(n.id);
+    const isSelected = n === selectedNode;
+    const isHover = n === hoverNode;
+    const isGateway = gatewayIds.has(n.id);
+    const isOrphan = orphanIds.has(n.id);
+
+    ctx.save();
+    ctx.globalAlpha = dimmed ? 0.15 : 1;
+
+    // Glow for gateway/selected
+    if ((isGateway || isSelected) && !dimmed) {
+      ctx.shadowColor = isSelected ? n.color : '#f0883e';
+      ctx.shadowBlur = isSelected ? 20 : 12;
+    }
+
+    // Node circle
+    ctx.fillStyle = n.color;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    // Gateway ring
+    if (isGateway && !dimmed) {
+      ctx.strokeStyle = '#f0883e';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r + 4, 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    // Orphan ring
+    if (isOrphan && !dimmed) {
+      ctx.strokeStyle = '#bc8cff';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3,3]);
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r + 4, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Hover ring
+    if (isHover && !dimmed) {
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r + 2, 0, Math.PI*2);
+      ctx.stroke();
+    }
+
+    // Label
+    if (!dimmed || isSelected) {
+      const label = n.id.split('/').pop();
+      ctx.fillStyle = dimmed ? 'rgba(139,148,158,0.4)' : '#e1e4e8';
+      ctx.font = `${isSelected || isHover ? '600' : '400'} 10px -apple-system, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(label, n.x, n.y + n.r + 14);
+    }
+
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+// ── Interaction ──
+let dragNode = null, isDragging = false, lastMouse = null;
+let isPanning = false;
+
+function getNodeAt(sx, sy) {
+  const { x, y } = screenToWorld(sx, sy);
+  for (let i = nodes.length-1; i >= 0; i--) {
+    const n = nodes[i];
+    const dx = n.x - x, dy = n.y - y;
+    if (dx*dx + dy*dy < (n.r+4)**2) return n;
+  }
+  return null;
+}
+
+canvas.addEventListener('mousedown', e => {
+  const node = getNodeAt(e.clientX, e.clientY);
+  if (node) {
+    dragNode = node;
+    isDragging = false;
+  } else {
+    isPanning = true;
+  }
+  lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+canvas.addEventListener('mousemove', e => {
+  const dx = e.clientX - (lastMouse?.x||e.clientX);
+  const dy = e.clientY - (lastMouse?.y||e.clientY);
+
+  if (dragNode) {
+    isDragging = true;
+    dragNode.x += dx / camScale;
+    dragNode.y += dy / camScale;
+    dragNode.vx = 0; dragNode.vy = 0;
+  } else if (isPanning) {
+    camX -= dx / camScale;
+    camY -= dy / camScale;
+  }
+  lastMouse = { x: e.clientX, y: e.clientY };
+
+  // Hover
+  const node = getNodeAt(e.clientX, e.clientY);
+  hoverNode = node;
+  canvas.style.cursor = node ? 'grab' : (isPanning ? 'grabbing' : 'default');
+
+  // Tooltip
+  const tip = document.getElementById('tooltip');
+  if (node) {
+    const isGateway = gatewayIds.has(node.id);
+    const isOrphan = orphanIds.has(node.id);
+    let badges = '';
+    if (node.is_leaf) badges += '<span class="badge badge-leaf">leaf</span>';
+    if (isGateway) badges += '<span class="badge badge-gateway">gateway</span>';
+    if (isOrphan) badges += '<span class="badge badge-orphan">orphan</span>';
+
+    const inEdges = edges.filter(e => e.target.id === node.id);
+    const outEdges = edges.filter(e => e.source.id === node.id);
+
+    let html = `<h4>${node.id.split('/').pop()} ${badges}</h4>`;
+    html += `<div class="meta">`;
+    html += `<strong>${node.file}</strong><br>`;
+    html += `Package: <span>${node.package}</span> · Lines: <span>${node.lines}</span><br>`;
+    html += `Fan in: <span>${node.fan_in}</span> · Fan out: <span>${node.fan_out_internal}</span>`;
+    if (isGateway) html += `<br><em style="color:#f0883e">${gatewayMap[node.id].description}</em>`;
+    if (isOrphan) html += `<br><em style="color:#bc8cff">${orphanMap[node.id].reason}</em>`;
+    if (outEdges.length) {
+      html += `<br><br><strong>Imports from:</strong><br>`;
+      for (const e of outEdges) {
+        html += `→ <span>${e.target.id.split('/').pop()}</span>: ${e.imports.join(', ')}<br>`;
+      }
+    }
+    if (inEdges.length) {
+      html += `<br><strong>Imported by:</strong><br>`;
+      for (const e of inEdges) {
+        html += `← <span>${e.source.id.split('/').pop()}</span><br>`;
+      }
+    }
+    html += '</div>';
+    tip.innerHTML = html;
+    tip.style.display = 'block';
+    let tx = e.clientX + 16, ty = e.clientY + 16;
+    if (tx + 320 > W) tx = e.clientX - 330;
+    if (ty + 200 > H) ty = e.clientY - 200;
+    tip.style.left = tx + 'px';
+    tip.style.top = ty + 'px';
+  } else {
+    tip.style.display = 'none';
+  }
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (dragNode && !isDragging) {
+    selectedNode = selectedNode === dragNode ? null : dragNode;
+  }
+  dragNode = null;
+  isPanning = false;
+  isDragging = false;
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 0.92 : 1.08;
+  camScale = Math.max(0.2, Math.min(5, camScale * factor));
+}, { passive: false });
+
+// ── Animation loop ──
+function loop() {
+  simulate();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

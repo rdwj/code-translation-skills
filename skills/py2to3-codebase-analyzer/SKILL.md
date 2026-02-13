@@ -43,6 +43,7 @@ All outputs go into a `migration-analysis/` directory at the codebase root (or a
 | `migration-report.md` | Markdown | Human-readable summary with key findings and recommendations |
 | `migration-report.json` | JSON | Machine-readable full analysis (consumed by other skills) |
 | `dependency-graph.json` | JSON | Module dependency graph with import relationships |
+| `dependency-graph.html` | HTML | Interactive force-directed visualization of the dependency graph (open in browser) |
 | `migration-order.json` | JSON | Topologically sorted conversion order with cluster groupings |
 | `version-matrix.md` | Markdown | Compatibility assessment per target Python 3 version |
 | `py2-ism-inventory.json` | JSON | Every Python 2 pattern found, categorized and located |
@@ -79,7 +80,14 @@ python3 scripts/build_dep_graph.py <output_dir>/raw-scan.json --output <output_d
 
 This produces:
 - `dependency-graph.json` — the full graph with nodes (modules) and edges (imports)
+- `dependency-graph.html` — an interactive force-directed visualization (open in any browser)
 - `migration-order.json` — topological sort with cluster detection
+
+The HTML visualization is a self-contained file with no external dependencies. It renders
+an interactive force-directed graph where nodes are color-coded by package and sized by
+line count. Hover for details, click to highlight connections, drag to rearrange, and
+scroll to zoom. Gateway modules are marked with orange rings, orphans with dashed purple
+rings. The template lives in `assets/dependency-graph-template.html`.
 
 The dependency graph is critical because it determines **what order to convert modules in**.
 Leaf modules (those with no internal dependencies) get converted first. Tightly coupled
