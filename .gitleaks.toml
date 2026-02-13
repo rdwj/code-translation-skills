@@ -1,0 +1,8 @@
+[allowlist]
+  description = "Allowlist for Python 2-to-3 migration skill suite"
+
+  paths = [
+    '''docs\/.*\.md$''',
+    '''shared\/references\/.*\.md$''',
+    '''.*\/SKILL\.md$''',
+  ]
