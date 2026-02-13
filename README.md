@@ -97,7 +97,26 @@ Each skill follows the skill-creator framework's three-level progressive disclos
 2. **Instructions** (SKILL.md body) — loaded when the skill is triggered
 3. **Resources** (`scripts/` and `references/`) — loaded as needed during execution
 
-To use a skill, point Claude at the skill directory. The agent reads the SKILL.md, understands the inputs and outputs, and runs the Python scripts in `scripts/` against your codebase. Each skill produces structured JSON output and a human-readable markdown report.
+To install, use the included installer script:
+
+```bash
+# Install all 26 skills to ~/.claude/skills/
+./scripts/install-skills.sh
+
+# Install to a specific project
+./scripts/install-skills.sh /path/to/your/project
+
+# Install specific skills only
+./scripts/install-skills.sh --skill py2to3-codebase-analyzer --skill py2to3-gate-checker
+
+# See what's available
+./scripts/install-skills.sh --list
+
+# Preview without copying
+./scripts/install-skills.sh --dry-run
+```
+
+The agent reads the SKILL.md, understands the inputs and outputs, and runs the Python scripts in `scripts/` against your codebase. Each skill produces structured JSON output and a human-readable markdown report.
 
 Reference documents (encoding patterns, syntax change catalogs, test vectors, etc.) are bundled in each skill's own `references/` directory — no external dependencies between skills.
 
@@ -105,6 +124,7 @@ Reference documents (encoding patterns, syntax change catalogs, test vectors, et
 
 | Document | Description |
 |----------|-------------|
+| [Getting Started](GETTING-STARTED.md) | Suggested prompt and walkthrough for starting a migration |
 | [PLAN.md](PLAN.md) | Authoritative specification for all 26 skills — inputs, outputs, capabilities, gate criteria, rollback procedures |
 | [Migration Guide](docs/MIGRATION-GUIDE.md) | Practitioner's guide to the "why" behind the migration approach — read this first for strategic context |
 | [docs/process/](docs/process/) | Build history: tracker, review reports, exploration chat log, prompt templates |
@@ -116,6 +136,9 @@ Reference documents (encoding patterns, syntax change catalogs, test vectors, et
 ├── README.md
 ├── LICENSE
 ├── PLAN.md
+├── GETTING-STARTED.md
+├── scripts/
+│   └── install-skills.sh
 ├── docs/
 │   ├── MIGRATION-GUIDE.md
 │   └── process/
@@ -124,39 +147,33 @@ Reference documents (encoding patterns, syntax change catalogs, test vectors, et
 │       ├── NEXT-CHAT-PROMPT.md
 │       ├── REVIEW-PROMPT.md
 │       └── REVIEW-REPORT.md
-├── orchestration/
-│   ├── py2to3-migration-state-tracker/
-│   ├── py2to3-rollback-plan-generator/
-│   └── py2to3-gate-checker/
-├── phase-0-discovery/
-│   ├── py2to3-codebase-analyzer/
-│   ├── py2to3-data-format-analyzer/
-│   ├── py2to3-serialization-detector/
-│   ├── py2to3-c-extension-flagger/
-│   └── py2to3-lint-baseline-generator/
-├── phase-1-foundation/
-│   ├── py2to3-future-imports-injector/
-│   ├── py2to3-test-scaffold-generator/
-│   ├── py2to3-ci-dual-interpreter/
-│   └── py2to3-custom-lint-rules/
-├── phase-2-mechanical/
-│   ├── py2to3-automated-converter/
-│   ├── py2to3-build-system-updater/
-│   └── py2to3-conversion-unit-planner/
-├── phase-3-semantic/
-│   ├── py2to3-bytes-string-fixer/
-│   ├── py2to3-library-replacement/
-│   ├── py2to3-dynamic-pattern-resolver/
-│   └── py2to3-type-annotation-adder/
-├── phase-4-verification/
-│   ├── py2to3-behavioral-diff-generator/
-│   ├── py2to3-performance-benchmarker/
-│   ├── py2to3-encoding-stress-tester/
-│   └── py2to3-completeness-checker/
-└── phase-5-cutover/
+└── skills/
+    ├── py2to3-automated-converter/
+    ├── py2to3-behavioral-diff-generator/
+    ├── py2to3-build-system-updater/
+    ├── py2to3-bytes-string-fixer/
+    ├── py2to3-c-extension-flagger/
     ├── py2to3-canary-deployment-planner/
+    ├── py2to3-ci-dual-interpreter/
+    ├── py2to3-codebase-analyzer/
     ├── py2to3-compatibility-shim-remover/
-    └── py2to3-dead-code-detector/
+    ├── py2to3-completeness-checker/
+    ├── py2to3-conversion-unit-planner/
+    ├── py2to3-custom-lint-rules/
+    ├── py2to3-data-format-analyzer/
+    ├── py2to3-dead-code-detector/
+    ├── py2to3-dynamic-pattern-resolver/
+    ├── py2to3-encoding-stress-tester/
+    ├── py2to3-future-imports-injector/
+    ├── py2to3-gate-checker/
+    ├── py2to3-library-replacement/
+    ├── py2to3-lint-baseline-generator/
+    ├── py2to3-migration-state-tracker/
+    ├── py2to3-performance-benchmarker/
+    ├── py2to3-rollback-plan-generator/
+    ├── py2to3-serialization-detector/
+    ├── py2to3-test-scaffold-generator/
+    └── py2to3-type-annotation-adder/
 ```
 
 ## License

@@ -296,7 +296,7 @@ This skill's outputs feed into:
 After running, update the migration state:
 
 ```bash
-python3 ../../orchestration/migration-state-tracker/scripts/update_state.py \
+python3 ../py2to3-migration-state-tracker/scripts/update_state.py \
     <state_file> record-output \
     --module <module_path> \
     --output-path <output_dir>/ci-setup-report.json

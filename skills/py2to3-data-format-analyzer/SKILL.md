@@ -209,7 +209,7 @@ This skill's outputs feed directly into:
 After running this skill, update the migration state tracker:
 
 ```bash
-python3 ../orchestration/migration-state-tracker/scripts/update_state.py \
+python3 ../py2to3-migration-state-tracker/scripts/update_state.py \
     <state_file> record-output \
     --module <module_path> \
     --output-path <output_dir>/data-layer-report.json

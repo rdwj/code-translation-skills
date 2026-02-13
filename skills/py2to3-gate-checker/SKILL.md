@@ -167,7 +167,7 @@ python3 scripts/generate_gate_report.py <output_dir>/gate-check-report.json \
 If the gate check passes, use the Migration State Tracker to advance the module:
 
 ```bash
-python3 ../migration-state-tracker/scripts/update_state.py <state_file> advance \
+python3 ../py2to3-migration-state-tracker/scripts/update_state.py <state_file> advance \
     --module "src/scada/modbus_reader.py" \
     --gate-report <output_dir>/gate-check-report.json
 ```
@@ -229,7 +229,7 @@ Sometimes a criterion can't be met and the risk is accepted. The gate checker su
 waivers recorded in the migration state:
 
 ```bash
-python3 ../migration-state-tracker/scripts/update_state.py <state_file> waiver \
+python3 ../py2to3-migration-state-tracker/scripts/update_state.py <state_file> waiver \
     --phase 2 \
     --criterion "test_coverage >= 80%" \
     --actual-value "62%" \
@@ -286,7 +286,7 @@ After running a gate check, update the state tracker regardless of the result:
 
 ```bash
 # Record the gate check output
-python3 ../migration-state-tracker/scripts/update_state.py <state_file> record-output \
+python3 ../py2to3-migration-state-tracker/scripts/update_state.py <state_file> record-output \
     --module "src/scada/modbus_reader.py" \
     --output-path <output_dir>/gate-check-report.json
 ```

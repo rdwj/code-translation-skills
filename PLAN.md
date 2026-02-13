@@ -881,47 +881,40 @@ These reference documents are bundled into each skill's own `references/` direct
 
 ```
 code-translation-skills/
-├── PLAN.md                              # This document
+├── PLAN.md                                  # This document
+├── README.md
+├── LICENSE
+├── docs/
+│   ├── MIGRATION-GUIDE.md
+│   └── process/
 │
-├── orchestration/
-│   ├── py2to3-migration-state-tracker/     # Skill X.1
-│   ├── py2to3-rollback-plan-generator/     # Skill X.2
-│   └── py2to3-gate-checker/               # Skill X.3
-│
-├── phase-0-discovery/
-│   ├── py2to3-codebase-analyzer/          # Skill 0.1
-│   ├── py2to3-data-format-analyzer/       # Skill 0.2
-│   ├── py2to3-serialization-detector/     # Skill 0.3
-│   ├── py2to3-c-extension-flagger/        # Skill 0.4
-│   └── py2to3-lint-baseline-generator/    # Skill 0.5
-│
-├── phase-1-foundation/
-│   ├── py2to3-future-imports-injector/    # Skill 1.1
-│   ├── py2to3-test-scaffold-generator/    # Skill 1.2
-│   ├── py2to3-ci-dual-interpreter/        # Skill 1.3
-│   └── py2to3-custom-lint-rules/          # Skill 1.4
-│
-├── phase-2-mechanical/
-│   ├── py2to3-conversion-unit-planner/    # Skill 2.1
-│   ├── py2to3-automated-converter/        # Skill 2.2
-│   └── py2to3-build-system-updater/       # Skill 2.3
-│
-├── phase-3-semantic/
-│   ├── py2to3-bytes-string-fixer/         # Skill 3.1
-│   ├── py2to3-library-replacement/        # Skill 3.2
-│   ├── py2to3-dynamic-pattern-resolver/   # Skill 3.3
-│   └── py2to3-type-annotation-adder/      # Skill 3.4
-│
-├── phase-4-verification/
-│   ├── py2to3-behavioral-diff-generator/  # Skill 4.1
-│   ├── py2to3-performance-benchmarker/    # Skill 4.2
-│   ├── py2to3-encoding-stress-tester/     # Skill 4.3
-│   └── py2to3-completeness-checker/       # Skill 4.4
-│
-└── phase-5-cutover/
-    ├── py2to3-canary-deployment-planner/  # Skill 5.1
-    ├── py2to3-compatibility-shim-remover/ # Skill 5.2
-    └── py2to3-dead-code-detector/         # Skill 5.3
+└── skills/                                  # All skills are flat — copy into .claude/skills/
+    ├── py2to3-automated-converter/          # Skill 2.2
+    ├── py2to3-behavioral-diff-generator/    # Skill 4.1
+    ├── py2to3-build-system-updater/         # Skill 2.3
+    ├── py2to3-bytes-string-fixer/           # Skill 3.1
+    ├── py2to3-c-extension-flagger/          # Skill 0.4
+    ├── py2to3-canary-deployment-planner/    # Skill 5.1
+    ├── py2to3-ci-dual-interpreter/          # Skill 1.3
+    ├── py2to3-codebase-analyzer/            # Skill 0.1
+    ├── py2to3-compatibility-shim-remover/   # Skill 5.2
+    ├── py2to3-completeness-checker/         # Skill 4.4
+    ├── py2to3-conversion-unit-planner/      # Skill 2.1
+    ├── py2to3-custom-lint-rules/            # Skill 1.4
+    ├── py2to3-data-format-analyzer/         # Skill 0.2
+    ├── py2to3-dead-code-detector/           # Skill 5.3
+    ├── py2to3-dynamic-pattern-resolver/     # Skill 3.3
+    ├── py2to3-encoding-stress-tester/       # Skill 4.3
+    ├── py2to3-future-imports-injector/      # Skill 1.1
+    ├── py2to3-gate-checker/                 # Skill X.3
+    ├── py2to3-library-replacement/          # Skill 3.2
+    ├── py2to3-lint-baseline-generator/      # Skill 0.5
+    ├── py2to3-migration-state-tracker/      # Skill X.1
+    ├── py2to3-performance-benchmarker/      # Skill 4.2
+    ├── py2to3-rollback-plan-generator/      # Skill X.2
+    ├── py2to3-serialization-detector/       # Skill 0.3
+    ├── py2to3-test-scaffold-generator/      # Skill 1.2
+    └── py2to3-type-annotation-adder/        # Skill 3.4
 ```
 
 ---
