@@ -4,6 +4,12 @@
 
 A skill suite for [Claude](https://claude.ai) that guides large-scale Python 2 to Python 3 migrations. Built on the [skill-creator](https://github.com/anthropics/courses/tree/master/skill-creator) framework, each skill is a self-contained unit that an AI agent can load to perform a specific migration task — from initial codebase analysis through final cutover.
 
+## Prerequisites
+
+- **[Claude Code](https://docs.claude.com/en/docs/claude-code)** (or any Claude environment with skills support)
+- **Python 3.6+** on the host machine (for running skill scripts — this is separate from the Python 2 codebase you're migrating)
+- A **Python 2 codebase** to migrate
+
 ## Why this exists
 
 Python 2 reached end of life in January 2020, but significant Py2 codebases remain in production — particularly in industries where software life cycles are measured in decades. Industrial control systems, financial platforms, scientific infrastructure, and government systems all contain Python 2 code that has run reliably enough that rewriting was never prioritized.
@@ -92,30 +98,41 @@ All code-generating skills accept a `--target-version` parameter (3.9, 3.11, 3.1
 
 ## Getting Started
 
+### Install
+
+```bash
+# Clone the repo
+git clone https://github.com/your-org/code-translation-skills.git
+cd code-translation-skills
+
+# Install all 27 skills to ~/.claude/skills/ (global)
+./scripts/install-skills.sh
+
+# Or install to a specific project (creates .claude/skills/ inside the project)
+./scripts/install-skills.sh /path/to/your/python2-project
+
+# Re-run anytime to update — existing skills are replaced cleanly
+./scripts/install-skills.sh --force
+```
+
+The installer copies each skill into `.claude/skills/` where Claude discovers them automatically. You can also install specific skills with `--skill NAME`, preview with `--dry-run`, or list what's available with `--list`.
+
+### Start a migration
+
+After installing, see **[Getting Started](GETTING-STARTED.md)** for the full walkthrough. The short version:
+
+1. Open a Claude Code session in your Python 2 project
+2. Ask Claude to run the **py2to3-project-initializer** — it creates a `migration-analysis/` directory, a tracking TODO, and a kickoff prompt
+3. Use the generated kickoff prompt to begin Phase 0 (Discovery)
+4. At the end of each session, the agent writes a **handoff prompt** for the next session — this is how context passes between sessions without losing anything
+
+### How skills work
+
 Each skill follows the skill-creator framework's three-level progressive disclosure:
 
 1. **Metadata** (YAML frontmatter in `SKILL.md`) — always visible to the agent for routing
 2. **Instructions** (SKILL.md body) — loaded when the skill is triggered
 3. **Resources** (`scripts/` and `references/`) — loaded as needed during execution
-
-To install, use the included installer script:
-
-```bash
-# Install all 27 skills to ~/.claude/skills/
-./scripts/install-skills.sh
-
-# Install to a specific project
-./scripts/install-skills.sh /path/to/your/project
-
-# Install specific skills only
-./scripts/install-skills.sh --skill py2to3-codebase-analyzer --skill py2to3-gate-checker
-
-# See what's available
-./scripts/install-skills.sh --list
-
-# Preview without copying
-./scripts/install-skills.sh --dry-run
-```
 
 The agent reads the SKILL.md, understands the inputs and outputs, and runs the Python scripts in `scripts/` against your codebase. Each skill produces structured JSON output and a human-readable markdown report.
 
