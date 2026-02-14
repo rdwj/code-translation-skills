@@ -318,3 +318,7 @@ from the latest Python 3 version to keep CI times reasonable.
 
 **Pre-existing CI configs are not overwritten.** The script generates files in the output
 directory. Review and apply them manually to avoid losing custom CI settings.
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

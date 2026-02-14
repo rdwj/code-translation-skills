@@ -62,6 +62,27 @@ inputs from the reference documents:
 
 ---
 
+## Scope and Chunking
+
+The encoding stress tester applies 6 adversarial test categories to data paths. On a codebase with many data paths, this produces a combinatorial expansion of test results.
+
+**Two-pass strategy** (recommended for codebases with 10+ data paths):
+
+**Pass 1 — Critical paths only**: Run stress tests against modules flagged as critical or high risk by the Data Format Analyzer (Skill 0.2). This typically covers the I/O boundary modules and serialization layer. Fix any failures before proceeding.
+
+**Pass 2 — Remaining paths**: After critical paths are clean, run against medium and low-risk modules. These are less likely to have encoding issues but should still be verified.
+
+**Per-module scoping**: If a single module has many data paths (e.g., a mainframe parser with 20 record types), run the stress tester per record type or per encoding family rather than all at once.
+
+**Expected output sizes**:
+- 5 data paths × 6 categories: 30–60KB
+- 20 data paths × 6 categories: 100–300KB
+- 50+ data paths: Split into passes; results are additive
+
+**Key principle**: Run critical paths first. If they pass, the remaining paths are lower risk and can be batched more aggressively. Report failures only — passing tests need not appear in the conversation.
+
+---
+
 ## Workflow
 
 ### 1. Load Data Path Inventory
@@ -242,6 +263,7 @@ criterion for Phase 4→5 advancement:
 - **hypothesis-strategies.md**: Property-based test strategies for randomized inputs
 
 ---
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ## Success Criteria
 

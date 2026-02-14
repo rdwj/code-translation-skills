@@ -60,6 +60,22 @@ cleanup task list. Until this tool reports 100%, the migration is not done.
 
 ---
 
+## Scope and Chunking
+
+The completeness checker scans every Python file for 10 categories of remaining Py2 artifacts. Output is proportional to the number of files × the number of findings.
+
+**For codebases under 200 files**: Run on the full codebase. Present a summary of findings per category with counts.
+
+**For codebases of 200–500 files**: Run on the full codebase but direct the agent to present only categories with findings. Zero-finding categories should be listed as "CLEAN" in a single line, not elaborated.
+
+**For codebases over 500 files**: Run per top-level package. The completeness check is purely per-file with no cross-file dependencies, so results are perfectly additive.
+
+**Conversation output strategy**: Present findings as a table — category, count, top-3 example files. The full `completeness-report.json` with per-file detail should be saved to disk. The `cleanup-tasks.json` is what downstream work (Phase 5 skills) will consume directly from disk.
+
+**Key principle**: The agent should answer "is the migration complete?" with a category-level summary, not a file-level dump. The detail exists on disk for anyone who needs it.
+
+---
+
 ## Workflow
 
 ### 1. Scan for Remaining Py2 Artifacts
@@ -253,6 +269,7 @@ The `cleanup-tasks.json` output orders remaining work by:
 - **py2-py3-semantic-changes.md**: Semantic patterns that may remain as compatibility code
 
 ---
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ## Success Criteria
 

@@ -420,3 +420,4 @@ The skill has succeeded when:
 - `references/rollback-risk-matrix.md` — Risk assessment for different rollback scenarios
 - [Git revert documentation](https://git-scm.com/docs/git-revert)
 - [Git cherry-pick documentation](https://git-scm.com/docs/git-cherry-pick)
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

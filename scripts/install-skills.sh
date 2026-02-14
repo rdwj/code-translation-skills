@@ -146,6 +146,10 @@ for skill in "${install_skills[@]}"; do
     if $DRY_RUN; then
         echo "  would copy: $skill"
     else
+        # Remove existing skill directory first for clean idempotent installs
+        if [[ -d "$TARGET_DIR/$skill" ]]; then
+            rm -rf "$TARGET_DIR/$skill"
+        fi
         cp -r "$SKILLS_SRC/$skill" "$TARGET_DIR/"
         echo "  installed:  $skill"
     fi

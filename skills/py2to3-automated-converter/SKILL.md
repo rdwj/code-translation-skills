@@ -57,6 +57,19 @@ The user (or orchestration) provides:
 | `conversion-diff.patch` | Unified diff | Reviewable patch file of all changes |
 | `conversion-state.json` | JSON | Updated migration state with unit status |
 
+## Scope and Chunking
+
+This skill already operates on a single conversion unit at a time — that is the correct granularity. However, conversion units vary in size, and large units can still strain context.
+
+**Recommended limits per invocation**:
+- Conversion units of 1–15 files: Process in a single invocation. This is the sweet spot.
+- Conversion units of 15–30 files: Process in a single invocation but direct the agent to report only files with non-trivial changes (not mechanical-only fixes).
+- Conversion units of 30+ files: Ask the Conversion Unit Planner (Skill 2.1) to subdivide. Units this large usually contain loosely-coupled modules that can be split without breaking atomicity.
+
+**Between conversion units**: The agent should save all outputs, update the migration state tracker, and produce a brief status summary before proceeding to the next unit. This creates natural checkpoints where the conversation can be handed off to a new session if context is getting long.
+
+**Key principle**: One conversion unit per invocation. Update state. Summarize. Move to the next unit. If the conversation is getting long, this is the natural handoff point — write a handoff prompt and continue in a new session.
+
 ## Workflow
 
 ### Step 1: Dry-Run to Review Changes
@@ -329,3 +342,7 @@ for unit in $(jq -r '.waves[].units[].name' conversion-plan.json); do
 done
 ```
 
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

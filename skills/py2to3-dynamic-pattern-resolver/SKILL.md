@@ -573,3 +573,7 @@ This skill modifies source files in-place (or to --output directory):
   are flagged for human review.
 - **Test coverage**: Recommend running tests after each skill to validate transformations.
 
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

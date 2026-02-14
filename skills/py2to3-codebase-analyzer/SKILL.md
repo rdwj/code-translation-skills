@@ -48,6 +48,28 @@ All outputs go into a `migration-analysis/` directory at the codebase root (or a
 | `version-matrix.md` | Markdown | Compatibility assessment per target Python 3 version |
 | `py2-ism-inventory.json` | JSON | Every Python 2 pattern found, categorized and located |
 
+## Scope and Chunking
+
+This skill scans the entire codebase in a single pass to build a complete dependency graph. On large codebases (500+ Python files), this can produce substantial output that strains the agent's context window.
+
+**For codebases under 200 files**: Run on the full codebase. Output will typically be under 50KB.
+
+**For codebases of 200–500 files**: Run on the full codebase but direct the agent to produce summary output (top-20 highest-risk modules, dependency graph statistics) rather than per-file detail. The full JSON outputs on disk remain complete — the agent just shouldn't dump them into the conversation.
+
+**For codebases over 500 files**: Split by top-level package. Run the analyzer on each package directory separately, producing per-package output files. Then run a final pass that merges the dependency graphs at the cross-package boundary. Example:
+
+```bash
+# Analyze packages separately
+python scripts/analyze_codebase.py src/core/ --output migration-analysis/core/
+python scripts/analyze_codebase.py src/data_processing/ --output migration-analysis/data_processing/
+python scripts/analyze_codebase.py src/io_protocols/ --output migration-analysis/io_protocols/
+
+# Merge results
+python scripts/analyze_codebase.py --merge migration-analysis/*/raw-scan.json --output migration-analysis/
+```
+
+**Key principle**: The JSON output files can be arbitrarily large — they live on disk and downstream skills read them from disk. What matters for context management is how much the agent puts into the conversation. Direct the agent to summarize, not regurgitate.
+
 ## Workflow
 
 ### Step 1: Discover the Codebase
@@ -325,3 +347,7 @@ must be especially thorough in identifying data ingestion points and encoding pa
 Python 3.13 continued removals. The version compatibility matrix is not optional — it
 directly affects migration scope and timeline. Always check
 `references/stdlib-removals-by-version.md` for the authoritative list.
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

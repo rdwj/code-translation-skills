@@ -303,3 +303,7 @@ automatically check each commit. This prevents accidental regressions.
 
 **Documentation is essential.** The generated `lint-rules-documentation.md` explains what each
 custom rule does and why it matters. Share this with your team.
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

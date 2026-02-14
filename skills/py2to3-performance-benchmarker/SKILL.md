@@ -211,6 +211,7 @@ The Gate Checker reads `performance-report.json` and checks the
 - **bytes-str-patterns.md**: Encoding operations that may add overhead
 
 ---
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ## Success Criteria
 

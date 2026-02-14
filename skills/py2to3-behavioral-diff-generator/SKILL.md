@@ -72,6 +72,28 @@ produces a clear report for human review.
 
 ---
 
+## Scope and Chunking
+
+Behavioral diff generation runs test inputs through both Python 2 and Python 3 interpreters and compares outputs. The output size is proportional to the test suite size × the number of behavioral differences found.
+
+**Scoping strategy**: Run per conversion unit, not per codebase. The conversion unit's tests are the natural scope boundary.
+
+**For large test suites (200+ tests per unit)**: Split into test categories:
+1. First pass: Unit tests only (fast, targeted)
+2. Second pass: Integration tests (cross-module, may reveal boundary issues)
+3. Third pass: Characterization tests (behavioral preservation validation)
+
+Present only the diffs that show actual behavioral differences — identical outputs need not appear in the conversation. The full comparison matrix should be saved to disk.
+
+**Expected output sizes**:
+- 50 tests with few diffs: 10–30KB
+- 200 tests with moderate diffs: 50–150KB
+- 500+ tests: Split into batches; do not attempt in a single pass
+
+**Key principle**: The agent should report behavioral diffs by severity (breaking → semantic → cosmetic) and focus the conversation on breaking changes. The full matrix lives on disk.
+
+---
+
 ## Workflow
 
 ### 1. Discover Test Cases
@@ -250,6 +272,7 @@ The Gate Checker (Skill X.3) reads `behavioral-diff-report.json` and checks the
 - **py2-py3-syntax-changes.md**: Syntax changes that cause expected repr diffs
 - **py2-py3-semantic-changes.md**: Semantic changes that cause behavioral diffs
 - **bytes-str-patterns.md**: Common bytes/str diffs to expect
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ---
 

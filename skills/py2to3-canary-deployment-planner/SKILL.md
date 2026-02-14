@@ -314,3 +314,4 @@ The skill has succeeded when:
 - [Kubernetes Canary Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#canary-deployment)
 - [Istio Traffic Management](https://istio.io/latest/docs/tasks/traffic-management/)
 - [HAProxy Configuration](http://www.haproxy.org/#docs)
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

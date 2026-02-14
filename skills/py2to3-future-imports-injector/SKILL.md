@@ -196,3 +196,7 @@ This makes debugging much easier.
 (SCADA protocol handlers, binary file parsers). For those, `unicode_literals` may need
 to be skipped or the file may need `b''` prefixes added to byte string literals. The
 cautious mode handles this by treating `unicode_literals` separately.
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

@@ -290,3 +290,4 @@ The skill has succeeded when:
 
 - `references/serialization-migration.md` — Comprehensive pickle/marshal/shelve Py2→Py3 migration guide covering protocol version matrix, marshal dangers, shelve backend compatibility, custom `__getstate__`/`__setstate__` auditing, and struct packing patterns
 - `references/encoding-patterns.md` — EBCDIC, binary protocol, and mixed encoding detection patterns (relevant for struct-based serialization)
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

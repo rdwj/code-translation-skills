@@ -306,3 +306,7 @@ are sensible starting points but shouldn't be sacred.
 from a failed check. "Not evaluated" means the prerequisite skill hasn't run yet; "fail"
 means it ran and the result didn't meet the threshold. This distinction helps diagnose
 what work is actually needed.
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

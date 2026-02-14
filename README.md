@@ -1,6 +1,6 @@
 # py2to3 Migration Skill Suite
 
-**26 skills | 6 phases | 52 scripts | 12 reference docs**
+**27 skills | 6 phases | 53 scripts**
 
 A skill suite for [Claude](https://claude.ai) that guides large-scale Python 2 to Python 3 migrations. Built on the [skill-creator](https://github.com/anthropics/courses/tree/master/skill-creator) framework, each skill is a self-contained unit that an AI agent can load to perform a specific migration task — from initial codebase analysis through final cutover.
 
@@ -85,6 +85,7 @@ All code-generating skills accept a `--target-version` parameter (3.9, 3.11, 3.1
 
 | Skill | Directory | Purpose |
 |-------|-----------|---------|
+| X.0 Project Initializer | `py2to3-project-initializer` | Bootstraps the migration project: directory structure, TODO.md, kickoff prompt, handoff prompt pattern |
 | X.1 Migration State Tracker | `py2to3-migration-state-tracker` | Maintains per-module migration state, tracks phase progression, generates dashboards |
 | X.2 Rollback Plan Generator | `py2to3-rollback-plan-generator` | Produces phase-specific rollback runbooks with git, K8s, and infrastructure commands |
 | X.3 Gate Checker | `py2to3-gate-checker` | Enforces gate criteria for all 5 phase transitions, blocks progression until requirements are met |
@@ -100,7 +101,7 @@ Each skill follows the skill-creator framework's three-level progressive disclos
 To install, use the included installer script:
 
 ```bash
-# Install all 26 skills to ~/.claude/skills/
+# Install all 27 skills to ~/.claude/skills/
 ./scripts/install-skills.sh
 
 # Install to a specific project
@@ -124,8 +125,9 @@ Reference documents (encoding patterns, syntax change catalogs, test vectors, et
 
 | Document | Description |
 |----------|-------------|
-| [Getting Started](GETTING-STARTED.md) | Suggested prompt and walkthrough for starting a migration |
-| [PLAN.md](PLAN.md) | Authoritative specification for all 26 skills — inputs, outputs, capabilities, gate criteria, rollback procedures |
+| [Getting Started](GETTING-STARTED.md) | Quick start guide, handoff prompt pattern, and suggested prompts |
+| [Scale Playbook](docs/SCALE-PLAYBOOK.md) | How to adjust the workflow for small, medium, large, and very large codebases |
+| [PLAN.md](PLAN.md) | Authoritative specification for all 27 skills — inputs, outputs, capabilities, gate criteria, rollback procedures |
 | [Migration Guide](docs/MIGRATION-GUIDE.md) | Practitioner's guide to the "why" behind the migration approach — read this first for strategic context |
 | [docs/process/](docs/process/) | Build history: tracker, review reports, exploration chat log, prompt templates |
 
@@ -141,6 +143,7 @@ Reference documents (encoding patterns, syntax change catalogs, test vectors, et
 │   └── install-skills.sh
 ├── docs/
 │   ├── MIGRATION-GUIDE.md
+│   ├── SCALE-PLAYBOOK.md
 │   └── process/
 │       ├── BUILD-TRACKER.md
 │       ├── EXPLORATION-CHAT.md
@@ -170,6 +173,7 @@ Reference documents (encoding patterns, syntax change catalogs, test vectors, et
     ├── py2to3-lint-baseline-generator/
     ├── py2to3-migration-state-tracker/
     ├── py2to3-performance-benchmarker/
+    ├── py2to3-project-initializer/
     ├── py2to3-rollback-plan-generator/
     ├── py2to3-serialization-detector/
     ├── py2to3-test-scaffold-generator/

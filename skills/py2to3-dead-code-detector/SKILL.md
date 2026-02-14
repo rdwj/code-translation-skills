@@ -64,6 +64,25 @@ All outputs go into the `--output` directory:
 
 ---
 
+## Scope and Chunking
+
+Dead code detection requires cross-module call graph analysis, which means it benefits from seeing the full codebase. However, the output can be presented incrementally.
+
+**Analysis**: Run on the full codebase — the call graph needs complete visibility to accurately determine reachability. This is a one-time scan, not an iterative process.
+
+**Output presentation**: Present findings by confidence tier:
+1. **Definite dead code** (confidence > 90%): Py2-only branches behind `sys.version_info` checks, unused `compat.py` re-exports — safe to remove
+2. **Likely dead code** (confidence 60–90%): Functions with no detected callers but possible dynamic invocation — review needed
+3. **Uncertain** (confidence < 60%): Flagged for human review, may be dynamically loaded
+
+Present only tiers 1 and 2 in the conversation. Save all findings to `dead-code-report.json` on disk.
+
+**For very large codebases (1000+ files)**: The call graph construction may be slow. Direct the agent to build the graph once, save it, and then query it for dead code patterns. The graph is reusable across multiple analysis passes.
+
+**Key principle**: Cast a wide net during analysis (full codebase), narrow the focus during presentation (high-confidence findings only).
+
+---
+
 ## Workflow
 
 ### Step 1: Discover All Code Definitions
@@ -318,3 +337,4 @@ The skill has succeeded when:
 - `references/dead-code-removal-strategy.md` — Safe removal order and dependency analysis
 - `references/version-guard-catalog.md` — All known version guard patterns
 - [Python AST documentation](https://docs.python.org/3/library/ast.html)
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

@@ -259,3 +259,4 @@ The skill has succeeded when:
 - `references/cython-py3-migration.md` — Cython-specific migration guidance
 - `references/ctypes-cffi-comparison.md` — When to use ctypes vs CFFI
 - [Python 3 C API Documentation](https://docs.python.org/3/c-api/)
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

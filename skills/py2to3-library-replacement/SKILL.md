@@ -306,3 +306,4 @@ find-and-replace.
 - `references/stdlib-removals-by-version.md` — Complete list of modules removed in each Python 3 minor version with replacement recommendations
 - `references/py2-py3-syntax-changes.md` — Catalog of syntax differences (includes import-related changes)
 - `references/serialization-migration.md` — cPickle→pickle migration details and protocol version guidance
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

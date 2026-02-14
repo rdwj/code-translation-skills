@@ -91,6 +91,7 @@ This skill performs AST-based type inference on converted Python code to add com
 - [Google Python docstring style](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
 - [NumPy docstring style](https://numpydoc.readthedocs.io/en/latest/format.html)
 - [mypy documentation](https://mypy.readthedocs.io/)
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ## Success Criteria
 

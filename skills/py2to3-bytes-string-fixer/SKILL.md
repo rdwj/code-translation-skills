@@ -75,6 +75,29 @@ auto-fixing clear cases, and escalating ambiguous cases to human review with ful
 
 ---
 
+## Scope and Chunking
+
+This is the highest-context-cost skill in the suite. Bytes/string boundary analysis requires the agent to reason about data flow across function boundaries, which means it needs to hold more context per file than any other skill. Budget accordingly.
+
+**Mandatory scoping**: Always scope to a single conversion unit. Never run this skill against the entire codebase at once.
+
+**Within a conversion unit**:
+- Process 5–10 files per invocation for modules with heavy binary I/O (protocols, serialization, encoding)
+- Process 10–20 files per invocation for modules with primarily text-mode operations
+- After each batch, save the `bytes-str-fixes.json` and `decisions-needed.json` outputs and update the migration state
+
+**Prioritization within a unit**: Process files in this order:
+1. I/O boundary modules (network, file, database) — these define the bytes/str contract
+2. Serialization modules — these must agree with the I/O boundary decisions
+3. Data processing modules — these consume the contracts established above
+4. Everything else
+
+**Human review checkpoints**: After processing the I/O boundary modules, pause and present the `decisions-needed.json` to the user. These decisions propagate to all downstream files — getting them wrong means redoing the entire unit.
+
+**Key principle**: Quality over speed. This skill's output correctness determines whether Phase 3 succeeds or fails. Take small bites and verify as you go.
+
+---
+
 ## Workflow
 
 ### 1. Load Phase 0 Boundary Map
@@ -549,6 +572,7 @@ Record every bytes/str decision in migration-state.json:
 - **serialization-migration.md**: struct.pack/unpack, pickle, protobuf in Py3
 
 ---
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ## Success Criteria
 

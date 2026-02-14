@@ -564,3 +564,17 @@ message = "Hello"  # Always Unicode in Py3
 - [python-future Documentation](https://python-future.org/)
 - [PEP 570 - Python 3.8+ Features](https://www.python.org/dev/peps/pep-0570/)
 - [PEP 604 - Union Types (Py 3.10+)](https://www.python.org/dev/peps/pep-0604/)
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
+
+## Scope and Chunking
+
+This skill already supports batch processing via the `--batch-size` parameter (default: 10 files per batch, with testing between batches). Use it.
+
+**Recommended batch sizes**:
+- Codebases under 100 files: `--batch-size 10` (default) is fine
+- Codebases of 100–500 files: `--batch-size 5` for safety; more files means more potential for cross-module breakage during shim removal
+- Codebases over 500 files: `--batch-size 5` and process one top-level package at a time
+
+**Between batches**: The agent should run the test suite, update the migration state, and confirm no regressions before proceeding. If a batch introduces test failures, stop and fix before continuing — shim removal failures compound.
+
+**Key principle**: Shim removal is the last phase before declaring the migration complete. Rushing it by increasing batch sizes to "go faster" risks introducing regressions that are harder to diagnose because the shims masked the underlying issue.

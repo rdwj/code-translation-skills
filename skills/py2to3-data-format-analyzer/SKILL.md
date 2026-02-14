@@ -60,6 +60,21 @@ All outputs go to `<output_dir>/`:
 | `serialization-inventory.json` | JSON | All serialization/deserialization points |
 | `bytes-str-boundaries.json` | JSON | Every point where bytes become text or vice versa |
 
+## Scope and Chunking
+
+This skill performs a deep analysis of the data layer — encoding patterns, serialization formats, binary protocols, and bytes/string boundaries. The output is proportional to the number of data touchpoints in the codebase, not the raw file count.
+
+**Scoping strategy**: If the codebase has clearly separated data layer packages (e.g., `io_protocols/`, `data_processing/`, `storage/`), analyze each package separately. The data format analyzer's output is additive — per-package results can be concatenated into a combined report without re-analysis.
+
+**For codebases with a diffuse data layer** (data handling spread across many packages): Run on the full codebase but limit conversation output to the summary statistics and the top-10 highest-risk modules. The full `bytes-str-boundaries.json` and `encoding-map.json` should remain on disk for Phase 3 consumption.
+
+**Expected output sizes**:
+- Small codebase (< 100 files): 10–30KB JSON
+- Medium codebase (100–500 files): 30–100KB JSON
+- Large codebase (500+ files): 100–500KB JSON
+
+**Key principle**: The agent should report findings by risk tier (critical → high → medium → low) and stop after covering critical and high-risk items in the conversation. The complete findings are always available on disk.
+
 ## Workflow
 
 ### Step 1: Scan the Data Layer
@@ -225,6 +240,7 @@ This skill uses shared reference documents. Read them for detection guidance:
   data types, DNP3 binary formats, common pyserial patterns
 - `references/serialization-migration.md` — pickle protocol versions and
   Py2/Py3 compatibility, marshal format issues, shelve migration guide
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ## Important Notes
 

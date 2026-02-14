@@ -198,3 +198,7 @@ high risk is the single most important thing to get right. Budget extra time for
 **Wave parallelism is bounded by team capacity.** The planner assumes `N` units can be
 worked on simultaneously, but in practice this depends on how many people are available
 and how familiar they are with the code.
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

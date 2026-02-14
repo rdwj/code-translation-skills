@@ -320,3 +320,7 @@ conversion in Phase 2. Conversion units group files that must move together.
 Every decision about how to handle an encoding, which library to replace with what, or
 why a particular bytes/str boundary was resolved a certain way needs to be recorded. Future
 maintainers will thank us.
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

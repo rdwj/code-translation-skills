@@ -82,6 +82,7 @@ This skill scans and updates a Python project's build and packaging infrastructu
 - [setuptools documentation](https://setuptools.pypa.io/)
 - [distutils deprecation timeline](https://setuptools.pypa.io/en/latest/history.html)
 - [Python 3.12 distutils removal](https://docs.python.org/3.12/whatsnew/3.12.html#distutils)
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ## Success Criteria
 

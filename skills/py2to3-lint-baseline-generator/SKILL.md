@@ -181,3 +181,25 @@ would cause a parse error.
 **pyupgrade target version**: The `--py3X-plus` flag controls which upgrades are shown.
 For target 3.12, use `--py312-plus`. The script maps the `target_version` parameter to
 the correct flag automatically.
+
+## Scope and Chunking
+
+Linting the entire codebase at once is safe — the linters themselves handle large codebases efficiently. The risk is in how the agent presents the results.
+
+**For any codebase over 100 files**: Direct the agent to produce a summary report with aggregate counts per category and per-module scores, not per-finding detail. The full lint output should be saved to `migration-analysis/lint-baseline.json` and referenced by path, not pasted into the conversation.
+
+**Recommended approach**:
+1. Run all linters, capturing output to files
+2. Summarize: total findings by category, top-10 modules by finding count, overall migration readiness score
+3. Present the summary in the conversation; reference the full report by path
+
+**Expected output sizes**:
+- pylint --py3k on 100 files: 20–80KB
+- pylint --py3k on 500 files: 100–400KB
+- Combined lint output on 1000+ files: 500KB–2MB
+
+The full lint baseline is consumed by downstream skills (Custom Lint Rules, Gate Checker) directly from disk. The agent never needs to load the entire baseline into the conversation.
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

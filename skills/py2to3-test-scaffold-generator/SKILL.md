@@ -231,3 +231,7 @@ documents in `references/` contain test vectors for these.
 the paths that matter for migration. A module with 40% overall coverage but 100% coverage
 on its data ingestion paths is better protected than one with 80% coverage that never
 tests with non-ASCII data.
+
+## References
+
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
