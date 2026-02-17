@@ -13,12 +13,46 @@ This skill bootstraps a Python 2→3 migration project. Run it once at the very 
 
 **Critical design principle: right-size the process to the project.** A 5-file pacman game should not go through the same 6-phase, 30-skill pipeline as a 500-file industrial platform. The initializer's first job is to figure out which workflow fits.
 
-## Step 0: Quick Size Scan
+## Step 0: Create the Workspace
 
-Before creating any scaffolding, run a fast sizing scan. This takes seconds, not minutes:
+**Never modify the source repository directly.** Before any analysis or conversion, create a peer working directory. The source repo stays pristine as a reference; all migration work happens in the workspace.
+
+```
+parent-dir/
+├── my-project/              ← original source (READ-ONLY during migration)
+├── my-project-py3/          ← working copy (all edits happen here)
+│   ├── <full source copy>
+│   └── migration-analysis/  ← scaffolding, reports, state
+```
+
+**Setup steps:**
+1. Copy the source tree to `<project-name>-py3/` as a peer directory
+2. If the source is a git repo, create a new branch in the workspace: `git checkout -b py3-migration`
+3. Run all analysis and conversion against the workspace copy
+4. The original source serves as a diff baseline and rollback target
 
 ```bash
-python scripts/quick_size_scan.py /path/to/project
+# Create workspace as peer directory
+cp -r /path/to/my-project /path/to/my-project-py3
+cd /path/to/my-project-py3
+git checkout -b py3-migration  # if git repo
+```
+
+**Why peer directory instead of in-place?**
+- Original source is always available for `diff` comparison
+- No risk of corrupting the production codebase
+- Git history stays clean (migration is one branch, not mixed into main)
+- Easy rollback: just delete the workspace and start over
+- Multiple migration attempts can coexist
+
+**For Express workflow on tiny projects:** The workspace copy is still recommended but optional. If the project is < 10 files with no tests and you're confident, you can work in-place on a git branch.
+
+## Step 1: Quick Size Scan
+
+Before creating any scaffolding, run a fast sizing scan on the workspace. This takes seconds, not minutes:
+
+```bash
+python scripts/quick_size_scan.py /path/to/my-project-py3
 ```
 
 The scan counts Python files, total lines of code, and does a fast pattern grep for high-risk indicators (binary I/O, C extensions, pickle/marshal, EBCDIC, custom codecs). It produces a sizing verdict:
@@ -156,18 +190,22 @@ All skills are available. Use the TODO template from `references/TODO-TEMPLATE.m
 
 | Input | Required | Description |
 |-------|----------|-------------|
-| Project root | Yes | Path to the Python 2 codebase |
-| Target Python version | No | Default: 3.12 |
-| Workflow override | No | Force a specific workflow (express/standard/full) regardless of sizing |
+| Source project root | Yes | Path to the original Python 2 codebase (used as read-only reference) |
+| `--workspace` | No | Path for the working copy (default: `<project-name>-py3` as peer directory) |
+| `--in-place` | No | Skip workspace creation, work directly on source (not recommended) |
+| `--target-version` | No | Default: 3.12 |
+| `--workflow` | No | Force a specific workflow (express/standard/full/auto) regardless of sizing |
 
 ## Outputs
 
 | Output | Location | Description |
 |--------|----------|-------------|
+| **Workspace directory** | `<project-name>-py3/` (peer to source) | Full copy of source tree, all edits happen here |
 | Sizing report | stdout (or `migration-analysis/sizing-report.json` for standard/full) | Project size, complexity flags, recommended workflow |
-| Directory structure | `migration-analysis/` | Scaled to workflow tier |
-| TODO.md | `migration-analysis/TODO.md` | Scaled to workflow tier (not created for Express) |
-| Kickoff prompt | `migration-analysis/handoff-prompts/phase0-kickoff-prompt.md` | Not created for Express |
+| Directory structure | `<workspace>/migration-analysis/` | Scaled to workflow tier |
+| TODO.md | `<workspace>/migration-analysis/TODO.md` | Scaled to workflow tier (not created for Express) |
+| Kickoff prompt | `<workspace>/migration-analysis/handoff-prompts/phase0-kickoff-prompt.md` | Not created for Express |
+| Migration state | `<workspace>/migration-analysis/state/migration-state.json` | Includes `source_root` and `workspace` paths |
 
 ## The Handoff Prompt Pattern (Standard and Full only)
 
@@ -193,12 +231,19 @@ python3 scripts/quick_size_scan.py /path/to/project [--output sizing-report.json
 ```
 
 ### `scripts/init_migration_project.py`
-Creates the directory structure, TODO.md, and kickoff prompt. Now takes `--workflow` parameter.
+Creates the workspace, directory structure, TODO.md, and kickoff prompt. Handles workspace copy and git branch setup.
 
 ```bash
-python3 scripts/init_migration_project.py /path/to/project \
-    --target-version 3.12 \
-    --workflow express|standard|full|auto
+# Typical usage — creates peer workspace automatically
+python3 scripts/init_migration_project.py /path/to/source-project \
+    --target-version 3.12
+
+# Custom workspace location
+python3 scripts/init_migration_project.py /path/to/source-project \
+    --workspace /path/to/my-workspace
+
+# In-place (not recommended — skips workspace copy)
+python3 scripts/init_migration_project.py /path/to/project --in-place
 ```
 
 `--workflow auto` (default) uses the sizing scan result. Override with explicit workflow if you know better.

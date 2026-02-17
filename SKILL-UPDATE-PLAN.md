@@ -443,6 +443,37 @@ Created in `skills/universal-code-graph/queries/`:
 - javascript-definitions.scm, javascript-imports.scm, javascript-calls.scm
 - java-definitions.scm, java-imports.scm
 
+## Round 6: Workspace Strategy (2026-02-17)
+
+Previously, the skill suite assumed in-place modification of the source tree. This was risky — one bad conversion could corrupt the production codebase, and rollback depended entirely on git revert. Round 6 adds a peer-directory workspace strategy.
+
+### Changes Made
+
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| R6-1 | Added "Step 0: Create the Workspace" to project-initializer SKILL.md | COMPLETE | Peer directory strategy, git branch setup, rationale |
+| R6-2 | Updated init_migration_project.py | COMPLETE | Added `--workspace`, `--in-place`, `--workflow` flags; auto-creates `<project>-py3/` copy; creates git branch; records source_root + workspace in migration-state.json |
+| R6-3 | Updated Inputs/Outputs in project-initializer SKILL.md | COMPLETE | New inputs table, workspace output row, migration-state includes paths |
+| R6-4 | Added "Workspace Assumption" section to automated-converter SKILL.md | COMPLETE | Clarifies that codebase_path should be the workspace, not original source |
+| R6-5 | Updated HANDOFF-PROMPT-GUIDE.md context block | COMPLETE | Handoff prompts now include both workspace and original source paths |
+
+### Key Design Decision
+
+```
+parent-dir/
+├── my-project/              ← original source (READ-ONLY during migration)
+├── my-project-py3/          ← working copy (all edits happen here)
+│   ├── <full source copy>
+│   └── migration-analysis/  ← scaffolding, reports, state
+```
+
+**Why peer directory, not in-place?**
+- Original source always available for diff comparison
+- No risk of corrupting production codebase
+- Git history stays clean (migration is one branch)
+- Easy rollback: delete workspace and start over
+- Multiple migration attempts can coexist
+
 ## Next Steps (Remaining Work)
 
 ### P2: Additional Tree-sitter Queries

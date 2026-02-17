@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
-Initialize a Python 2→3 migration project.
-
-Creates the migration-analysis directory structure, generates TODO.md tracking
-file, and produces the Phase 0 kickoff prompt for session continuity.
+Script: init_migration_project.py
+Purpose: Initialize a Python 2→3 migration project with workspace setup
+Inputs: Source project root, optional workspace path
+Outputs: Workspace directory, migration-analysis scaffolding, TODO.md, kickoff prompt
+LLM involvement: NONE
 """
 
 import argparse
 import json
+import shutil
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -35,6 +38,49 @@ def count_python_files(project_root):
 def get_project_name(project_root):
     """Extract project name from the root directory."""
     return Path(project_root).name
+
+
+def create_workspace(source_root, workspace_path=None):
+    """Create a peer working directory by copying the source tree.
+
+    Returns the workspace path. If workspace already exists, validates
+    it and returns it without overwriting.
+    """
+    source = Path(source_root).resolve()
+
+    if workspace_path:
+        workspace = Path(workspace_path).resolve()
+    else:
+        # Default: peer directory with -py3 suffix
+        workspace = source.parent / f"{source.name}-py3"
+
+    if workspace.exists():
+        # Workspace already exists — validate it has Python files
+        py_files = list(workspace.rglob("*.py"))
+        if py_files:
+            print(f"Workspace already exists at {workspace} ({len(py_files)} .py files)", file=sys.stderr)
+            return workspace
+        else:
+            print(f"Warning: Workspace exists at {workspace} but has no .py files", file=sys.stderr)
+            return workspace
+
+    print(f"Creating workspace: {source} → {workspace}", file=sys.stderr)
+    shutil.copytree(source, workspace, symlinks=True)
+
+    # If it's a git repo, create a migration branch
+    git_dir = workspace / ".git"
+    if git_dir.exists():
+        try:
+            subprocess.run(
+                ["git", "checkout", "-b", "py3-migration"],
+                cwd=str(workspace),
+                capture_output=True, text=True, timeout=30
+            )
+            print("Created git branch: py3-migration", file=sys.stderr)
+        except Exception as e:
+            print(f"Note: Could not create git branch: {e}", file=sys.stderr)
+
+    return workspace
 
 
 def get_chunking_note(file_count):
@@ -129,6 +175,8 @@ def generate_kickoff_prompt(project_root, file_count, target_version):
 
     prompt = f"""I need to migrate this Python 2 codebase to Python 3. You have a suite of py2to3 migration skills installed — 26 skills across 6 phases that handle everything from initial analysis through final cutover.
 
+**Workspace setup**: The working copy is at `{Path(project_root).resolve()}`. This is a copy of the original source — all edits happen here. The original source is preserved as a read-only reference for diff comparisons.
+
 The migration tracking file is at migration-analysis/TODO.md — update it as you complete each step.
 
 Before we start writing any code, let's run Phase 0 (Discovery) to understand what we're working with. Please:
@@ -164,68 +212,94 @@ def main():
     parser = argparse.ArgumentParser(
         description="Initialize a Python 2→3 migration project"
     )
-    parser.add_argument("project_root", help="Path to the Python 2 codebase")
+    parser.add_argument("project_root", help="Path to the Python 2 source codebase")
     parser.add_argument(
         "--target-version",
         default="3.12",
         help="Target Python version (default: 3.12)",
     )
+    parser.add_argument(
+        "--workspace",
+        default=None,
+        help="Path for the working copy (default: <project>-py3 as peer directory)",
+    )
+    parser.add_argument(
+        "--in-place",
+        action="store_true",
+        help="Skip workspace creation and work directly on the source (not recommended)",
+    )
+    parser.add_argument(
+        "--workflow",
+        choices=["express", "standard", "full", "auto"],
+        default="auto",
+        help="Workflow tier (default: auto, determined by sizing scan)",
+    )
 
     args = parser.parse_args()
 
     try:
-        # Count Python files and categorize
-        file_count, size_category = count_python_files(args.project_root)
+        source_root = Path(args.project_root).resolve()
+
+        # Step 1: Create workspace (unless --in-place)
+        if args.in_place:
+            work_dir = source_root
+            print(f"WARNING: Working in-place on {work_dir}", file=sys.stderr)
+            print("  Original source will be modified. Use git for rollback.", file=sys.stderr)
+        else:
+            work_dir = create_workspace(source_root, args.workspace)
+            print(f"Workspace ready: {work_dir}")
+
+        # Step 2: Count Python files and categorize
+        file_count, size_category = count_python_files(work_dir)
         print(f"Found {file_count} Python files ({size_category} codebase)")
 
-        # Create directory structure
-        base_dir = create_directory_structure(args.project_root)
+        # Step 3: Create directory structure in the workspace
+        base_dir = create_directory_structure(work_dir)
         print(f"Created migration-analysis directory at: {base_dir}")
 
         # Initialize migration state
-        state_file = create_migration_state(base_dir / "state")
+        state = {
+            "initialized": datetime.now().isoformat(),
+            "phase": 0,
+            "modules": [],
+            "gate_status": {},
+            "source_root": str(source_root),
+            "workspace": str(work_dir),
+            "in_place": args.in_place,
+        }
+        state_file = base_dir / "state" / "migration-state.json"
+        state_file.write_text(json.dumps(state, indent=2))
         print(f"Initialized migration state: {state_file}")
 
         # Generate TODO.md
-        todo_content = generate_todo_md(args.project_root, file_count, args.target_version)
+        todo_content = generate_todo_md(str(work_dir), file_count, args.target_version)
         todo_file = base_dir / "TODO.md"
         todo_file.write_text(todo_content)
         print(f"Generated TODO.md: {todo_file}")
 
         # Generate Phase 0 kickoff prompt
         kickoff_prompt = generate_kickoff_prompt(
-            args.project_root, file_count, args.target_version
+            str(work_dir), file_count, args.target_version
         )
         kickoff_file = base_dir / "handoff-prompts" / "phase0-kickoff-prompt.md"
         kickoff_file.write_text(kickoff_prompt)
         print(f"Generated Phase 0 kickoff prompt: {kickoff_file}")
 
-        # Summary
-        print("\n" + "=" * 70)
-        print("MIGRATION PROJECT INITIALIZED")
-        print("=" * 70)
-        print(f"Project: {get_project_name(args.project_root)}")
-        print(f"Target Python: {args.target_version}")
-        print(f"Codebase: {file_count} files ({size_category})")
-        print(f"\nDirectory structure created:")
-        print(f"  {base_dir}/")
-        print(f"  ├── TODO.md (phase-by-phase tracking)")
-        print(f"  ├── migration-state.json (current progress)")
-        print(f"  ├── handoff-prompts/")
-        print(f"  │   └── phase0-kickoff-prompt.md (ready to use)")
-        print(f"  ├── phase-0-discovery/")
-        print(f"  ├── phase-1-foundation/")
-        print(f"  ├── phase-2-mechanical/")
-        print(f"  ├── phase-3-semantic/")
-        print(f"  ├── phase-4-verification/")
-        print(f"  └── phase-5-cutover/")
-        print(f"\nNext steps:")
-        print(f"  1. Review migration-analysis/TODO.md")
-        print(f"  2. Use the kickoff prompt to start Phase 0:")
-        print(f"     → {kickoff_file}")
-        print(f"  3. Update TODO.md as you complete each skill")
-        print(f"  4. Write handoff prompts to continue across sessions")
-        print("=" * 70)
+        # JSON summary to stdout
+        summary = {
+            "project": get_project_name(str(source_root)),
+            "source_root": str(source_root),
+            "workspace": str(work_dir),
+            "in_place": args.in_place,
+            "target_version": args.target_version,
+            "file_count": file_count,
+            "size_category": size_category,
+            "migration_analysis": str(base_dir),
+            "todo": str(todo_file),
+            "kickoff_prompt": str(kickoff_file),
+            "state_file": str(state_file),
+        }
+        print(json.dumps(summary, indent=2))
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

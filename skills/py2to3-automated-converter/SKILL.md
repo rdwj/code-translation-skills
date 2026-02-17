@@ -33,17 +33,23 @@ except-as, old-style string types, relative imports, etc.
 - When you need to track which files succeeded and which failed
 - When you need to integrate with CI/CD to validate the converted code
 
+## Workspace Assumption
+
+This skill assumes you are running against a **workspace copy**, not the original source repo. The project initializer creates a peer directory (`<project>-py3/`) that contains a full copy of the source tree. All conversion edits happen in-place within that workspace — the original source remains untouched as a diff baseline.
+
+If `migration-state.json` exists, it contains `source_root` and `workspace` paths. Use the workspace path as `codebase_path`.
+
 ## Inputs
 
 The user (or orchestration) provides:
 
 | Input | Type | Purpose |
 |-------|------|---------|
-| **codebase_path** | path | Root directory of the Python 2 codebase |
+| **codebase_path** | path | Root directory of the workspace (the `-py3` copy, not the original) |
 | **modules** | list of paths | Individual module files to convert (or `--unit <name>` to use conversion plan) |
 | **target_version** | string | Target Python 3 version: `3.9`, `3.11`, `3.12`, or `3.13` |
 | **--unit** | string | Conversion unit name from conversion-plan.json (resolves to module list automatically) |
-| **--output** | path | Output directory for converted files (default: same as source) |
+| **--output** | path | Output directory for converted files (default: modify in workspace) |
 | **--dry-run** | flag | Show what would change without modifying files |
 | **--state-file** | path | Path to migration-state.json (for tracking progress) |
 | **--conversion-plan** | path | Path to conversion-plan.json from Skill 2.1 (for unit resolution) |

@@ -7,12 +7,13 @@ A handoff prompt is a self-contained document that lets someone (or an agent) co
 Every handoff prompt should contain these sections:
 
 ### 1. Context Block
-State what project this is, where it lives, what the target Python version is, and which phases are complete with their gate status.
+State what project this is, where the **workspace** lives (the `-py3` copy, not the original source), what the target Python version is, and which phases are complete with their gate status.
 
 Example:
 ```
-This is Phase 3 (Semantic Fixes) of a Python 2→3 migration for the "Legacy Industrial Data Platform"
-at /path/to/project.
+This is Phase 3 (Semantic Fixes) of a Python 2→3 migration for the "Legacy Industrial Data Platform".
+Workspace: /path/to/project-py3  (working copy — all edits here)
+Original source: /path/to/project  (read-only reference for diffs)
 
 Phases completed:
 - Phase 0 (Discovery): PASS — codebase analyzed, 699 Py2-isms inventoried
