@@ -291,18 +291,6 @@ Confidence = 0.0
 → CRITICAL: Create tests before verification can proceed. Use uncovered-paths.json from contract extractor.
 ```
 
-## Model Tier Assignment
-
-This skill uses two model tiers for different tasks:
-
-| Task | Model | Rationale |
-|------|-------|-----------|
-| Test execution, output capture, basic comparison | Haiku | Fast, reliable execution; straightforward output diff |
-| Discrepancy analysis, root cause investigation | Sonnet | Deeper reasoning: why did output differ? Is it expected? Contract violation or acceptable variation? |
-
-Haiku runs the tests and produces raw `source-baseline.json` and `target-outputs.json`.
-Sonnet reads both and produces `discrepancy-analysis.json` with detailed reasoning.
-
 ## Verification Result Structure
 
 The JSON result file contains:
@@ -573,6 +561,12 @@ with mock.patch('smtplib.SMTP') as mock_smtp:
        --output gate-report/
    # Will verify: behavioral_contract_verified criterion
    ```
+
+## Model Tier
+
+**Haiku (60%) + Sonnet (40%).** Running tests and checking return values against contract clauses is mechanical — use Haiku. Analyzing why a verification failed and determining whether the failure is a real regression or an expected behavioral change requires Sonnet.
+
+Decomposition: Haiku executes all verification checks and flags failures. Sonnet analyzes only the failed checks to classify them as real bugs vs. expected changes.
 
 ## References
 

@@ -305,6 +305,12 @@ The skill has succeeded when:
 
 ---
 
+## Model Tier
+
+**Sonnet.** Canary deployment planning requires understanding infrastructure architecture, failure modes, and risk. This is an inherently reasoning-heavy task.
+
+Decomposition: Haiku can collect the infrastructure inventory (CI config, deployment manifests, monitoring setup). Sonnet designs the canary strategy, traffic split percentages, rollback triggers, and monitoring queries. This is typically a single Sonnet invocation per project, not per-file.
+
 ## References
 
 - `references/canary-deployment-patterns.md` — Industry best practices for canary deployments

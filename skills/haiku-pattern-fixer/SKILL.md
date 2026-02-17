@@ -407,6 +407,10 @@ missed). The orchestrator must be prepared to triage, re-analyze, and retry.
 orchestrator can easily undo failed fixes and re-analyze. This is safer than trying to get
 every fix perfect the first time.
 
+## Model Tier
+
+**Haiku only.** This skill is purpose-built for Haiku. Each invocation handles one atomic pattern fix with pre-computed context. Never escalate to Sonnet — if a fix is too complex for Haiku, it belongs in a different skill (dynamic-pattern-resolver or bytes-string-fixer).
+
 ## References
 
 - `references/WORK-ITEM-GENERATOR.md` — How work items are created upstream

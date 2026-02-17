@@ -74,6 +74,10 @@ This skill scans and updates a Python project's build and packaging infrastructu
    - Use modern PEP 517/518 format
    - Archive original setup.py as setup.py.bak
 
+## Model Tier
+
+**Haiku.** Build system updates are template-based transformations of configuration files (setup.py, pyproject.toml, tox.ini). Pattern substitution with version numbers. Always use Haiku.
+
 ## References
 
 - [PEP 517: Build system interface](https://www.python.org/dev/peps/pep-0517/)

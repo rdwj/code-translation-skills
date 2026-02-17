@@ -186,21 +186,6 @@ Produce `contract-summary.md` with:
 - Functions with no test coverage for key error paths
 - Top modernization opportunities across the codebase
 
-## Model Tier
-
-**Extraction: Sonnet.** Contract extraction requires inferring intent from code — what
-does this function *mean*, not just what does it *do* syntactically. This is moderate
-reasoning that Sonnet handles well. Each function is processed independently with its
-call-graph neighborhood as context, keeping token usage bounded.
-
-**Validation: Haiku.** After Sonnet produces a contract, a Haiku-tier validation pass
-checks that the contract is internally consistent (parameters match signature, types
-are plausible, etc.). This catches hallucinations cheaply.
-
-**Estimated cost:** For a 500-function codebase, ~500 Sonnet calls (one per function,
-~2K tokens each) + ~500 Haiku validation calls. Total: roughly $2-5 depending on
-function complexity.
-
 ## What Gets Lost — and How Contracts Catch It
 
 | Risk | Example | Contract field that catches it |
@@ -240,6 +225,12 @@ flag supports glob patterns.
 **Not all functions need deep contracts.** Simple getters, setters, and trivial
 utility functions can use `shallow` depth. Reserve `deep` analysis for functions
 that handle I/O, binary data, encoding, or complex state.
+
+## Model Tier
+
+**Sonnet** (with Haiku pre-processing). Inferring behavioral specifications from code requires understanding what functions do, not just what they look like.
+
+Decomposition: Haiku extracts function signatures, docstrings, parameter types, return types, and test assertions — the raw material for contracts. Sonnet synthesizes these into behavioral contracts, inferring implicit behaviors (side effects, error conditions, ordering assumptions). Process one function per Sonnet call, topological order, so downstream functions can reference upstream contracts.
 
 ## References
 

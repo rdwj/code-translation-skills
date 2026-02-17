@@ -301,6 +301,10 @@ using `from __future__ import absolute_import`, which helps. Check for this.
 unnecessary diffs in the final code. Use AST-based replacement, not regex-based
 find-and-replace.
 
+## Model Tier
+
+**Haiku.** Library replacement is pattern-based import rewriting from a known mapping table (ConfigParser→configparser, urllib2→urllib.request, etc.). Always use Haiku.
+
 ## References
 
 - `references/stdlib-removals-by-version.md` — Complete list of modules removed in each Python 3 minor version with replacement recommendations

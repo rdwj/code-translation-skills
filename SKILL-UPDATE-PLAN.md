@@ -314,6 +314,27 @@ Use this section to track what's been completed across context windows.
 | A6 | dead-code-detector | COMPLETE | 2026-02-17 | Added tree-sitter fallback, multi-language dead code via call graph |
 | A7 | automated-converter | COMPLETE | 2026-02-17 | Added behavioral contract validation, model-tier awareness, non-Python limitations |
 
+## Round 2: Adaptive Sizing + Model Tier Optimization (2026-02-17)
+
+Motivated by testing on a small project where Phase 0 alone took 30 minutes — the same time a competitor finished the entire migration. The suite was treating every project the same regardless of size.
+
+### Changes Made
+
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| R2-1 | Rewrote py2to3-project-initializer SKILL.md | COMPLETE | Added quick_size_scan, Express/Standard/Full workflows, sizing thresholds |
+| R2-2 | Created references/TODO-TEMPLATE-STANDARD.md | COMPLETE | 3-phase condensed template for medium projects |
+| R2-3 | Created references/MODEL-TIER-GUIDE.md | COMPLETE | Central reference: per-skill model tier table, decomposition patterns, cost estimates |
+| R2-4 | Added "## Model Tier" to all 34 skills | COMPLETE | 15 Haiku-only, 10 Haiku+Sonnet decomposable, 7 Sonnet with Haiku preprocessing, 2 Sonnet-only |
+
+### Key Design Decisions
+
+- **Express workflow** for ≤20 files: 4 skills max, single session, all Haiku, no scaffolding overhead
+- **Standard workflow** for 21-100 files: 3 phases instead of 6, selective skill use, 2-4 sessions
+- **Full workflow** for 100+ files: unchanged 6-phase pipeline
+- **Complexity escalators** can bump a project up a tier (C extensions, binary protocols, zero tests)
+- **Every skill now has explicit model-tier guidance** with decomposition strategies where applicable
+
 ## Next Steps (Implementation)
 
 All SKILL.md files are now updated/created. The next phase is implementing the actual scripts:

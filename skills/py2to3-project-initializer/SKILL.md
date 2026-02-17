@@ -1,73 +1,134 @@
 ---
 name: py2to3-project-initializer
 description: >
-  Initialize a Python 2→3 migration project. Creates the migration-analysis directory structure,
-  generates a TODO.md tracking file, and produces the Phase 0 kickoff prompt. This is the first
-  skill to run — it sets up the scaffolding that all other skills depend on.
+  Initialize a Python 2→3 migration project. Performs a quick sizing scan to classify
+  the project as small/medium/large, then creates appropriately-scaled scaffolding.
+  Small projects get a streamlined single-session workflow; large projects get the full
+  multi-phase, multi-session pipeline. This is the first skill to run.
 ---
 
 # Project Initializer
 
 This skill bootstraps a Python 2→3 migration project. Run it once at the very beginning, before any analysis or conversion work.
 
-It does three things:
+**Critical design principle: right-size the process to the project.** A 5-file pacman game should not go through the same 6-phase, 30-skill pipeline as a 500-file industrial platform. The initializer's first job is to figure out which workflow fits.
 
-1. **Creates the migration directory structure** — a `migration-analysis/` directory with subdirectories for each phase's outputs, plus a `handoff-prompts/` directory for session continuity.
+## Step 0: Quick Size Scan
 
-2. **Generates a TODO.md** — a phase-by-phase tracking document that serves as the migration's table of contents. It lists every skill invocation needed, tracks completion status, and links to output files. The agent updates this file as work progresses.
-
-3. **Produces a Phase 0 kickoff prompt** — a ready-to-use prompt that starts the actual migration work in the current or next session.
-
-## Why This Skill Exists
-
-Large-scale migrations span multiple sessions. An agent's context window is finite, and a migration that touches hundreds of files across 6 phases will exceed it. The solution is to work in sessions, with each session focused on a specific chunk of work, and to pass context between sessions via **handoff prompts**.
-
-A handoff prompt is a self-contained document that gives the next session everything it needs to continue:
-- What has been completed (with references to output files on disk)
-- What the current migration state is
-- What specific work the next session should do
-- Which skills to use and in what order
-- What risks or blockers were discovered
-
-The pattern is: **run a phase (or part of a phase) → update the TODO → update the migration state → write a handoff prompt → start a new session with that prompt.**
-
-This skill sets up that entire workflow from the beginning.
-
-## Inputs
-
-| Input | Required | Description |
-|-------|----------|-------------|
-| Project root | Yes | Path to the Python 2 codebase |
-| Target Python version | No | Default: 3.12. Used in the kickoff prompt |
-| Codebase size estimate | No | If known, adjusts the chunking guidance in the TODO |
-
-## Outputs
-
-| Output | Location | Description |
-|--------|----------|-------------|
-| Directory structure | `migration-analysis/` | Phase output directories, handoff prompt directory |
-| TODO.md | `migration-analysis/TODO.md` | Phase-by-phase tracking with all skill invocations |
-| Kickoff prompt | `migration-analysis/handoff-prompts/phase0-kickoff-prompt.md` | Ready-to-use prompt for Phase 0 |
-
-## Scope and Chunking
-
-This skill runs once and produces a small, bounded output. No chunking needed.
-
-## Workflow
-
-### Step 1: Create the Directory Structure
+Before creating any scaffolding, run a fast sizing scan. This takes seconds, not minutes:
 
 ```bash
-python scripts/init_migration_project.py /path/to/project --target-version 3.12
+python scripts/quick_size_scan.py /path/to/project
 ```
 
-This creates:
+The scan counts Python files, total lines of code, and does a fast pattern grep for high-risk indicators (binary I/O, C extensions, pickle/marshal, EBCDIC, custom codecs). It produces a sizing verdict:
+
+| Category | Files | LOC | Characteristics | Workflow |
+|----------|-------|-----|-----------------|----------|
+| **Small** | ≤ 20 | ≤ 2,000 | Few or no semantic issues, no data layer complexity | **Express** — single session, minimal scaffolding |
+| **Medium** | 21–100 | 2,001–15,000 | Some semantic issues, limited data layer | **Standard** — 2–4 sessions, selective skill use |
+| **Large** | 101–500 | 15,001–100,000 | Significant semantic issues, data layer involvement | **Full** — multi-session, all phases, all skills |
+| **Very Large** | 500+ | 100,000+ | Complex data layer, C extensions, polyglot | **Full+Parallel** — sub-agent delegation, package-level splits |
+
+**Override:** The scan also checks for complexity escalators that bump a project up one tier regardless of size:
+
+- C extensions or CFFI/ctypes usage → bump up
+- Pickle/marshal with cross-version data files → bump up
+- EBCDIC, Modbus, or custom binary protocols → bump up
+- Zero test files → bump up (no safety net)
+
+The sizing verdict drives everything that follows.
+
+## Express Workflow (Small Projects)
+
+For small projects (≤ 20 files, ≤ 2,000 LOC, no complexity escalators):
+
+**Do not create the full migration-analysis directory structure.** Instead:
+
+1. Run a combined analysis-and-convert pass in a single session
+2. Use the codebase-analyzer in summary mode (no separate JSON outputs needed)
+3. Apply mechanical fixes directly (future imports, print statements, dict methods, etc.)
+4. Run the test suite (if it exists) after conversion
+5. Do a quick completeness scan for remaining Py2 artifacts
+6. Done. No handoff prompts, no state tracker, no gate checks.
+
+The Express workflow creates a minimal output:
+
+```
+migration-analysis/
+├── migration-summary.md      # What was found and fixed
+└── remaining-issues.md       # Anything that needs manual attention
+```
+
+**Model tier:** The entire Express workflow runs on Haiku. Small projects with simple patterns don't need Sonnet-level reasoning.
+
+**Skills used (Express):**
+
+| Skill | How it's used | Model |
+|-------|--------------|-------|
+| py2to3-codebase-analyzer | Summary mode — inline findings, no separate output files | Haiku |
+| py2to3-automated-converter | Direct conversion, all files at once | Haiku |
+| py2to3-library-replacement | If stdlib renames detected | Haiku |
+| py2to3-future-imports-injector | All files in one pass | Haiku |
+
+That's it. Four skills maximum. Most small projects need only the first two.
+
+**What gets skipped (Express):**
+- No data-format-analyzer, serialization-detector, c-extension-flagger (scan found no complexity escalators)
+- No conversion-unit-planner (no need to group files — do them all)
+- No behavioral-diff-generator, encoding-stress-tester, performance-benchmarker (overkill for small projects)
+- No migration-state-tracker, gate-checker (no phases to gate)
+- No handoff prompts (single session)
+- No build-system-updater (review manually — it's one file)
+- No canary-deployment-planner, rollback-plan-generator (not needed at this scale)
+
+## Standard Workflow (Medium Projects)
+
+For medium projects (21–100 files, or small projects with complexity escalators):
+
+Create a streamlined directory structure:
+
+```
+migration-analysis/
+├── TODO.md                   # Condensed — 3 phases, not 6
+├── handoff-prompts/
+├── phase-1-analyze-convert/  # Combines Phase 0+1+2
+├── phase-2-semantic/         # Phase 3 equivalent
+├── phase-3-verify-cutover/   # Combines Phase 4+5
+└── state/
+    └── migration-state.json
+```
+
+**Key differences from Full workflow:**
+
+- **3 phases instead of 6.** Discovery, foundation, and mechanical conversion merge into Phase 1. Verification and cutover merge into Phase 3.
+- **Selective skill use.** Only run specialized skills when the sizing scan flagged relevant complexity (e.g., skip bytes-string-fixer if no binary I/O detected, skip c-extension-flagger if no .so/.pyd files).
+- **1–2 handoff prompts maximum.** Medium projects typically need 2–4 sessions.
+- **Gate checks are simplified.** Use a lightweight pass/fail on test results rather than the full multi-criterion gate-checker.
+
+**Model tier:** Haiku for mechanical work (~70%), Sonnet for semantic fixes if needed (~30%). No Opus.
+
+**Skills used (Standard):**
+
+| Phase | Skills | Model |
+|-------|--------|-------|
+| 1: Analyze+Convert | codebase-analyzer, future-imports-injector, automated-converter, library-replacement | Haiku |
+| 1: Analyze+Convert | conversion-unit-planner (if > 50 files) | Haiku |
+| 2: Semantic | bytes-string-fixer (if flagged), dynamic-pattern-resolver (if flagged) | Sonnet |
+| 2: Semantic | type-annotation-adder (optional, user request only) | Sonnet |
+| 3: Verify+Cutover | behavioral-diff-generator (run test suite, compare), completeness-checker | Haiku |
+| 3: Verify+Cutover | compatibility-shim-remover, dead-code-detector | Haiku |
+
+## Full Workflow (Large Projects)
+
+For large projects (101+ files, or medium projects with complexity escalators):
+
+This is the original 6-phase workflow. Create the full directory structure:
 
 ```
 migration-analysis/
 ├── TODO.md
 ├── handoff-prompts/
-│   └── phase0-kickoff-prompt.md
 ├── phase-0-discovery/
 ├── phase-1-foundation/
 ├── phase-2-mechanical/
@@ -75,46 +136,77 @@ migration-analysis/
 ├── phase-4-verification/
 ├── phase-5-cutover/
 └── state/
-    └── migration-state.json (initialized, empty)
+    └── migration-state.json
 ```
 
-### Step 2: Review the TODO.md
+All skills are available. Use the TODO template from `references/TODO-TEMPLATE.md`.
 
-The generated TODO.md is a living document. It lists every skill invocation across all 6 phases, with checkboxes for tracking. The agent should update it after each skill completes.
+**Model tier routing:**
 
-The TODO.md is organized by phase and includes:
-- Estimated session count based on codebase size
-- Which skills to run in each phase
-- Expected outputs from each skill
-- Gate criteria for phase transitions
-- Handoff prompt reminders at natural break points
+| Work type | Model | % of token spend |
+|-----------|-------|-----------------|
+| Pattern scanning, file inventory, lint, config | Haiku | ~50% |
+| Mechanical conversion, imports, lib replacement | Haiku | ~20% |
+| Bytes/string, dynamic patterns, type inference | Sonnet | ~25% |
+| Architectural decisions, C extensions, novel patterns | Opus | ~5% |
 
-### Step 3: Review and Use the Kickoff Prompt
+**For Very Large projects** (500+ files): Split by top-level package and use sub-agent delegation per the SUB-AGENT-GUIDE. Run analysis in parallel across packages, merge results.
 
-The Phase 0 kickoff prompt is saved to `migration-analysis/handoff-prompts/phase0-kickoff-prompt.md`. It includes:
-- Context about the migration (target version, codebase size)
-- Specific skills to run for Phase 0
-- Instructions to save outputs and update state
-- The critical instruction: **write a handoff prompt for the next session when done**
+## Inputs
 
-Use this prompt to start Phase 0 in the current session or paste it into a new session.
+| Input | Required | Description |
+|-------|----------|-------------|
+| Project root | Yes | Path to the Python 2 codebase |
+| Target Python version | No | Default: 3.12 |
+| Workflow override | No | Force a specific workflow (express/standard/full) regardless of sizing |
 
-### Step 4: The Handoff Prompt Pattern
+## Outputs
 
-Every session should end with the agent writing a handoff prompt. The pattern the agent should follow:
+| Output | Location | Description |
+|--------|----------|-------------|
+| Sizing report | stdout (or `migration-analysis/sizing-report.json` for standard/full) | Project size, complexity flags, recommended workflow |
+| Directory structure | `migration-analysis/` | Scaled to workflow tier |
+| TODO.md | `migration-analysis/TODO.md` | Scaled to workflow tier (not created for Express) |
+| Kickoff prompt | `migration-analysis/handoff-prompts/phase0-kickoff-prompt.md` | Not created for Express |
 
-1. **Summarize what was accomplished** — which skills ran, what they found, key metrics
-2. **Reference output files by path** — the next session reads these from disk, not from conversation history
-3. **Call out risks and blockers** — anything that needs human decision or that downstream phases need to know about
-4. **List the specific next steps** — which skills to run, in what order, with any special parameters
-5. **Include the handoff instruction** — tell the next agent to write a handoff prompt too, continuing the chain
+## The Handoff Prompt Pattern (Standard and Full only)
 
-Save each handoff prompt to `migration-analysis/handoff-prompts/phaseN-handoff-prompt.md`.
+Every session in a multi-session migration should end with a handoff prompt. See `references/HANDOFF-PROMPT-GUIDE.md` for the complete guide.
 
-The chain of handoff prompts becomes the migration's narrative history — each one is a snapshot of the project's state at a transition point.
+The pattern: **do work → update TODO → update migration state → write handoff prompt → start new session with that prompt.**
+
+Each handoff prompt must be self-contained: what's done, what's next, where the artifacts are, what risks exist. A new session with zero history should be able to pick up from the handoff prompt alone.
+
+## Model Tier
+
+This skill itself runs on **Haiku**. It creates directories and generates text from templates — no reasoning required.
+
+When generating the TODO.md and kickoff prompt, embed model-tier hints for each skill invocation so the executing agent knows which model to use for sub-agent delegation. See `references/MODEL-TIER-GUIDE.md` for the complete routing table.
+
+## Scripts Reference
+
+### `scripts/quick_size_scan.py`
+Fast sizing scan. Counts files, LOC, greps for complexity escalators. Returns sizing category and recommended workflow. Runs in < 5 seconds on any project.
+
+```bash
+python3 scripts/quick_size_scan.py /path/to/project [--output sizing-report.json]
+```
+
+### `scripts/init_migration_project.py`
+Creates the directory structure, TODO.md, and kickoff prompt. Now takes `--workflow` parameter.
+
+```bash
+python3 scripts/init_migration_project.py /path/to/project \
+    --target-version 3.12 \
+    --workflow express|standard|full|auto
+```
+
+`--workflow auto` (default) uses the sizing scan result. Override with explicit workflow if you know better.
 
 ## References
 
-- `references/TODO-TEMPLATE.md` — Template for the generated TODO.md
+- `references/TODO-TEMPLATE.md` — Template for the Full workflow TODO.md
+- `references/TODO-TEMPLATE-STANDARD.md` — Template for the Standard workflow TODO.md
 - `references/HANDOFF-PROMPT-GUIDE.md` — Detailed guide for writing effective handoff prompts
-- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
+- `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents
+- `references/MODEL-TIER-GUIDE.md` — Which model tier to use for each skill and task type

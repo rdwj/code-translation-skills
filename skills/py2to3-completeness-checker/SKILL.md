@@ -269,6 +269,13 @@ The `cleanup-tasks.json` output orders remaining work by:
 - **py2-py3-semantic-changes.md**: Semantic patterns that may remain as compatibility code
 
 ---
+
+## Model Tier
+
+**Haiku.** Completeness checking is pattern scanning for known Py2 artifact signatures. Grep-level detection with checklist comparison. Always use Haiku.
+
+## References
+
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ## Success Criteria

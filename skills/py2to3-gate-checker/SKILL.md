@@ -352,6 +352,10 @@ When a module fails this gate, the gate report includes:
 - List of contract clauses that failed verification
 - Suggested remediation (re-run translation-verifier after fixing issues)
 
+## Model Tier
+
+**Haiku.** Gate checking is threshold comparison — reading evidence files and checking values against criteria. No semantic reasoning required. Always delegate to Haiku when using sub-agents.
+
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

@@ -353,6 +353,12 @@ This skill produces the foundational data that most other skills consume:
 | py2to3-dead-code-detector | call-graph.json | Graph-based reachability analysis |
 | migration-dashboard | dependency-graph.json, language-summary.json | Visualization data |
 
+## Model Tier
+
+**Haiku** for the core pipeline (language detection, tree-sitter parsing, graph assembly). The universal code graph skill is primarily script execution — tree-sitter does the parsing, NetworkX does the graph math, the LLM orchestrates. No semantic reasoning about code contents is needed.
+
+When used as infrastructure for other skills (e.g., behavioral-contract-extractor reads the call graph), the downstream skill's model tier applies, not this one's.
+
 ## References
 
 - `references/tree-sitter-query-syntax.md` — S-expression query language reference

@@ -390,6 +390,12 @@ This workflow uses different skills — the automated-converter's role remains P
 transformation. The two approaches complement each other: ast transformation for Python,
 LLM-driven for everything else.
 
+## Model Tier
+
+**Haiku (85%) + Sonnet (15%).** lib2to3 fixer execution and diff generation are mechanical — use Haiku. Reviewing transformation conflicts (where multiple fixers disagree or produce invalid code) benefits from Sonnet. For simple projects, Haiku handles everything.
+
+Decomposition: Haiku applies fixers and generates diffs. If any transformation produces a conflict or warning, escalate those specific files to Sonnet for resolution.
+
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

@@ -200,6 +200,10 @@ Linting the entire codebase at once is safe — the linters themselves handle la
 
 The full lint baseline is consumed by downstream skills (Custom Lint Rules, Gate Checker) directly from disk. The agent never needs to load the entire baseline into the conversation.
 
+## Model Tier
+
+**Haiku.** Lint baseline generation invokes pylint/flake8 tools and parses their output into metrics. No code reasoning required. Always use Haiku.
+
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

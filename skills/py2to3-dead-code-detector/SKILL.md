@@ -372,6 +372,12 @@ For enhanced dead code detection:
 
 ---
 
+## Model Tier
+
+**Haiku (75%) + Sonnet (25%).** Simple dead code detection (unreachable code after return/raise, unused imports, version-guarded blocks) is pattern matching — use Haiku. Complex reachability analysis through dynamic dispatch or metaclass-generated methods may need Sonnet.
+
+Decomposition: Haiku scans all files and flags candidates with confidence scores. Candidates marked "uncertain" (reachable through dynamic paths) get a second pass with Sonnet analyzing just those functions and their call contexts.
+
 ## References
 
 - `references/py2-compat-patterns.md` — Common Py2 compatibility patterns to detect
