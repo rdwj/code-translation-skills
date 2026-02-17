@@ -335,16 +335,124 @@ Motivated by testing on a small project where Phase 0 alone took 30 minutes — 
 - **Complexity escalators** can bump a project up a tier (C extensions, binary protocols, zero tests)
 - **Every skill now has explicit model-tier guidance** with decomposition strategies where applicable
 
-## Next Steps (Implementation)
+## Round 3: Script Offload Analysis (2026-02-17)
 
-All SKILL.md files are now updated/created. The next phase is implementing the actual scripts:
+Motivated by hitting API usage limits. Identified that many skills describe deterministic work that the LLM does at token cost when scripts could do it for free.
 
-1. **Phase 1 scripts** (universal-code-graph): `language_detect.py`, `ts_parser.py`, `universal_extractor.py`, `analyze_universal.py`, Python `.scm` query files
-2. **Phase 2 scripts**: `py2_patterns_ts.py` — tree-sitter queries for all 20+ Python 2 patterns
-3. **Phase 3 scripts**: `depends_runner.py` — multilang-depends subprocess integration
-4. **Phase 4**: Query files for Java, C, C++, Rust, Ruby, Go (3 files × 7 languages = 21 `.scm` files)
-5. **Phase 5**: `graph_builder.py` enhancements, call graph, NetworkX export
-6. **Phase 6 scripts**: `behavioral_analyzer.py`, `work_decomposer.py`, `extract_contracts.py`, `haiku_fixer.py`, `verify_translation.py`, `advise_modernization.py`
-7. **Phase 7**: `generate_dashboard.py` + `dashboard/index.html` template
-8. **Phase 8**: Update existing skill scripts with tree-sitter fallback paths
-9. **Phase 9**: Generalize naming, create target-language template skills
+### Changes Made
+
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| R3-1 | Created SCRIPT-OFFLOAD-PLAN.md | COMPLETE | Comprehensive audit of all 34 skills, categorized offload opportunities |
+
+### Key Findings
+
+- **7 skills had no scripts at all** despite describing fully/mostly deterministic work
+- **5 skills had scripts that punted logic to the LLM** that should be in-script
+- **11 skills already had complete scripts** — no changes needed
+- Estimated 73-80% token savings from implementing all script offloads
+
+## Round 4: Script Implementation (2026-02-17)
+
+Implemented all P0 (new scripts) and P1 (enhanced existing scripts) from the offload plan.
+
+### P0: New Scripts Created (11 scripts, ~5,813 lines total)
+
+| # | Script | Skill | Lines | Status |
+|---|--------|-------|-------|--------|
+| 1 | quick_size_scan.py | py2to3-project-initializer | 447 | COMPLETE ✓ |
+| 2 | generate_work_items.py | work-item-generator | 594 | COMPLETE ✓ |
+| 3 | language_detect.py | universal-code-graph | 321 | COMPLETE ✓ |
+| 4 | ts_parser.py | universal-code-graph | 225 | COMPLETE ✓ |
+| 5 | universal_extractor.py | universal-code-graph | 293 | COMPLETE ✓ |
+| 6 | graph_builder.py | universal-code-graph | 474 | COMPLETE ✓ |
+| 7 | verify_translation.py | translation-verifier | 759 | COMPLETE ✓ |
+| 8 | extract_contracts.py | behavioral-contract-extractor | 849 | COMPLETE ✓ |
+| 9 | apply_fix.py | haiku-pattern-fixer | 517 | COMPLETE ✓ |
+| 10 | check_modernization.py | modernization-advisor | 462 | COMPLETE ✓ |
+| 11 | generate_dashboard.py | migration-dashboard | 872 | COMPLETE ✓ |
+
+### P1: Enhanced Existing Scripts (3 scripts enhanced, 2 verified complete)
+
+| # | Script | Enhancement | Status |
+|---|--------|------------|--------|
+| 1 | generate_diffs.py | Added 5 missing expected-diff patterns + flagged-for-review.json output | ENHANCED ✓ |
+| 2 | detect_dead_code.py | Added unreachable code detection + flagged-for-review.json output | ENHANCED ✓ |
+| 3 | check_completeness.py | Audited — all 10 categories already implemented | VERIFIED ✓ |
+| 4 | generate_tests.py | Added property-based test generation (Hypothesis) | ENHANCED ✓ |
+| 5 | detect_serialization.py | Audited — all 10 categories + risk rules already implemented | VERIFIED ✓ |
+
+### Verification
+
+- All 11 new scripts pass Python 3 syntax check (py_compile)
+- All 3 enhanced scripts pass Python 3 syntax check
+- quick_size_scan.py functionally tested on sample project — correctly identifies small project, applies complexity escalators, recommends workflow
+
+## Round 5: Second-Pass Review — Infrastructure & Optimization (2026-02-17)
+
+Deep review of all scripts and skills identified 5 additional optimization opportunities. All implemented.
+
+### Changes Made
+
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| R5-1 | Reference file deduplication | COMPLETE | Consolidated 47 duplicate copies of 11 files to `docs/references/shared/`, created 27 INDEX.md pointers, removed 22,946 lines |
+| R5-2 | analyze_universal.py orchestrator | COMPLETE | Chains language_detect → ts_parser → universal_extractor → graph_builder into single CLI call with regex fallback |
+| R5-3 | Phase runner scripts (7 scripts) | COMPLETE | phase0-phase5 runners + run_express.py eliminate LLM orchestration between skills |
+| R5-4 | Trim oversized SKILL.md files | COMPLETE | Top 5 files trimmed from avg 595 → avg 257 lines; examples extracted to references/EXAMPLES.md |
+| R5-5 | Tree-sitter .scm query files | COMPLETE | 8 query files for Python, JavaScript, Java (definitions, imports, calls) |
+
+### R5-1: Reference Deduplication Details
+
+11 unique reference files were duplicated across 27 skills (47 total copies, 22,946 redundant lines):
+
+| File | Copies Found | Shared Location |
+|------|-------------|-----------------|
+| SUB-AGENT-GUIDE.md | 8 | docs/references/shared/ |
+| py2-py3-semantic-changes.md | 6 | docs/references/shared/ |
+| py2-py3-syntax-changes.md | 5 | docs/references/shared/ |
+| bytes-str-patterns.md | 4 | docs/references/shared/ |
+| + 7 more files | various | docs/references/shared/ |
+
+### R5-3: Phase Runner Scripts
+
+| Script | Skills Chained | Workflow |
+|--------|---------------|----------|
+| phase0_discovery.py | quick_size_scan → analyze_universal → analyze | Full/Standard |
+| phase1_foundation.py | inject_futures → run_lint → generate_tests | Full/Standard |
+| phase2_mechanical.py | generate_work_items → apply_fix (loop) → replace_libs | Full/Standard |
+| phase3_semantic.py | Prepares semantic-review-brief.json for LLM | Full only |
+| phase4_verification.py | verify_translation → check_completeness → detect_dead_code → check_gate | Full/Standard |
+| phase5_cutover.py | remove_shims → update_build → generate_ci → generate_dashboard | Full/Standard |
+| run_express.py | Chains phases 0→1→2→4 in single command | Express |
+
+### R5-4: SKILL.md Trimming
+
+| Skill | Before | After | Reduction |
+|-------|--------|-------|-----------|
+| modernization-advisor | 638 | 269 | 58% |
+| py2to3-bytes-string-fixer | 593 | 270 | 55% |
+| py2to3-dynamic-pattern-resolver | 585 | 151 | 74% |
+| py2to3-compatibility-shim-remover | 584 | 289 | 50% |
+| translation-verifier | 577 | 306 | 47% |
+
+### R5-5: Tree-sitter Query Files
+
+Created in `skills/universal-code-graph/queries/`:
+- python-definitions.scm, python-imports.scm, python-calls.scm
+- javascript-definitions.scm, javascript-imports.scm, javascript-calls.scm
+- java-definitions.scm, java-imports.scm
+
+## Next Steps (Remaining Work)
+
+### P2: Additional Tree-sitter Queries
+
+1. `py2_patterns_ts.py` — Tree-sitter queries for all 20+ Python 2 patterns
+2. Query files for Go, Rust, Ruby, C/C++ (3 queries × 5 languages = 15 `.scm` files)
+
+### P3: Integration and Polish
+
+3. `depends_runner.py` — multilang-depends subprocess integration
+4. Update existing skill scripts with tree-sitter fallback paths
+5. Generalize naming, create target-language template skills
+6. End-to-end integration test of run_express.py on a real Python 2 project

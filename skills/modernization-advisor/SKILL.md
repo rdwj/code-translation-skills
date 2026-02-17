@@ -102,285 +102,47 @@ For each identified pattern, search the target language ecosystem for:
 
 ### Step 4: Generate Per-Function Suggestions
 
-For each function, produce a suggestion object:
+For each function, produce a suggestion object with:
+- Opportunity ID and title
+- Pattern matching (source pattern → target pattern)
+- Library equivalents with confidence scores
+- Estimated code reduction (lines before/after, percentage)
+- Risk assessment (level, reasons, mitigations)
+- Code sketch (minimal idiomatic example)
+- Contract preservation (inputs, outputs, errors, side effects)
+- Ecosystem equivalents (full library mapping)
+- Effort estimate (hours for rewrite, testing, review)
 
-```json
-{
-  "function": "src.io.csv_mailer.send_csv_emails",
-  "source_lines": 45,
-  "target_language": "rust",
-  "modernization_opportunities": [
-    {
-      "opportunity_id": "opp_1",
-      "title": "Use serde + lettre for CSV parsing and SMTP",
-      "description": "Replace csv + smtplib with Rust idioms: serde for structured data parsing, lettre for async SMTP",
-      "pattern_match": {
-        "source_pattern": "csv.DictReader + smtplib.SMTP in loop",
-        "target_pattern": "serde::Deserialize + lettre::SmtpTransport"
-      },
-      "libraries": [
-        {
-          "source_lib": "csv",
-          "target_lib": "csv",
-          "confidence": 0.95,
-          "notes": "Direct equivalent, well-maintained"
-        },
-        {
-          "source_lib": "smtplib",
-          "target_lib": "lettre",
-          "confidence": 0.85,
-          "notes": "Async-first, requires restructuring for tokio runtime"
-        },
-        {
-          "source_lib": "logging",
-          "target_lib": "tracing",
-          "confidence": 0.90,
-          "notes": "Idiomatic Rust logging with structured output"
-        }
-      ],
-      "estimated_reduction": {
-        "source_lines": 45,
-        "target_lines": 12,
-        "reduction_percent": 73
-      },
-      "risk_assessment": {
-        "level": "medium",
-        "reasons": [
-          "Requires restructuring for async I/O (tokio runtime)",
-          "Error handling changes: Python exceptions → Rust Result<T, E>",
-          "smtplib.SMTPAuthenticationError → lettre::transport::smtp::error::Error with pattern matching"
-        ],
-        "mitigations": [
-          "Lettre has well-defined error types, easier to test",
-          "Async SMTP is more performant and allows batch operations",
-          "Type safety catches many edge cases at compile time"
-        ]
-      },
-      "code_sketch": {
-        "description": "Minimal idiomatic Rust implementation",
-        "code": "use csv::ReaderBuilder;\nuse lettre::{SmtpTransport, Transport};\nuse lettre::message::MultiPart;\n\n#[tokio::main]\nasync fn send_csv_emails(csv_path: &str, smtp_host: &str, port: u16) -> Result<usize, Box<dyn std::error::Error>> {\n    let file = std::fs::File::open(csv_path)?;\n    let mut reader = ReaderBuilder::new().has_headers(true).from_reader(file);\n    \n    let transport = SmtpTransport::builder_dangerous(smtp_host).port(port).build()?;\n    let mut count = 0;\n    \n    for result in reader.deserialize() {\n        let (email, _): (String, String) = result?;\n        let msg = MultiPart::alternative().build();\n        match transport.send(&msg) {\n            Ok(_) => { count += 1; tracing::info!(target: email); },\n            Err(e) => { tracing::error!(target: email, error: ?e); }\n        }\n    }\n    Ok(count)\n}\n"
-      },
-      "contract_preservation": {
-        "input_semantics": "str (filesystem path, SMTP host) → preserved as &str",
-        "output_semantics": "int (count of emails) → preserved as usize",
-        "error_conditions": [
-          { "source": "FileNotFoundError", "target": "std::io::Error via File::open", "preserved": true },
-          { "source": "smtplib.SMTPAuthenticationError", "target": "lettre::transport::smtp::Error with pattern match", "preserved": true }
-        ],
-        "side_effects": [
-          { "source": "logging.info per email", "target": "tracing::info! macro", "preserved": true }
-        ]
-      },
-      "ecosystem_equivalents": [
-        {
-          "source_crate": "csv",
-          "target_crate": "csv",
-          "mapping_type": "direct",
-          "version_compat": "csv 1.3+ compatible with lettre 0.11+"
-        },
-        {
-          "source_crate": "smtplib (stdlib)",
-          "target_crate": "lettre",
-          "mapping_type": "library_replacement",
-          "version_compat": "lettre 0.11+ has async support"
-        },
-        {
-          "source_crate": "logging (stdlib)",
-          "target_crate": "tracing",
-          "mapping_type": "idiomatic_upgrade",
-          "version_compat": "tracing 0.1+"
-        }
-      ],
-      "effort_estimate": {
-        "rewrite_hours": 4,
-        "testing_hours": 3,
-        "review_hours": 1,
-        "total_hours": 8,
-        "notes": "Mostly effort is async structuring and error mapping. Domain logic is straightforward."
-      }
-    },
-    {
-      "opportunity_id": "opp_2",
-      "title": "Go alternative: csv + net/smtp with goroutines",
-      "target_language": "go",
-      "description": "Leverage Go's concurrency model with goroutines for parallel email sending",
-      "pattern_match": {
-        "source_pattern": "Sequential loop: for row in csv.DictReader",
-        "target_pattern": "Parallel: for range rows with worker goroutines + buffered channel"
-      },
-      "estimated_reduction": {
-        "source_lines": 45,
-        "target_lines": 28,
-        "reduction_percent": 38
-      },
-      "risk_assessment": {
-        "level": "low",
-        "reasons": [
-          "Go's net/smtp and encoding/csv are stdlib, well-tested",
-          "Goroutines are idiomatic for I/O-bound workloads",
-          "Error handling via return values is familiar to Python developers"
-        ],
-        "benefits": [
-          "Parallel email sending (goroutines) beats Python's serial approach + GIL",
-          "Single executable binary, cross-platform",
-          "Simpler deployment than Python + dependencies"
-        ]
-      },
-      "code_sketch": {
-        "code": "package main\nimport (\n\t\"encoding/csv\"\n\t\"fmt\"\n\t\"net/smtp\"\n\t\"os\"\n)\n\nfunc sendCSVEmails(csvPath, smtpHost string, port int) (int, error) {\n\tfile, err := os.Open(csvPath)\n\tif err != nil { return 0, err }\n\tdefer file.Close()\n\t\n\treadCloser := csv.NewReader(file)\n\trecords, err := readCloser.ReadAll()\n\tif err != nil { return 0, err }\n\t\n\tcount := 0\n\tfor _, record := range records {\n\t\tauth := smtp.PlainAuth(\"\", os.Getenv(\"SMTP_USER\"), os.Getenv(\"SMTP_PASS\"), smtpHost)\n\t\taddr := fmt.Sprintf(\"%s:%d\", smtpHost, port)\n\t\terr := smtp.SendMail(addr, auth, from, []string{record[0]}, []byte(msg))\n\t\tif err == nil { count++ }\n\t}\n\treturn count, nil\n}\n"
-      }
-    }
-  ]
-}
-```
+See `references/EXAMPLES.md` for complete opportunity object structure and sample Rust/Go opportunities.
 
 ### Step 5: Rate by Risk and Confidence
 
-For each suggestion:
+For each suggestion, assess both adoption and technical risk:
 
-**Risk assessment** rates both adoption risk and technical risk:
+- **Low risk**: 1:1 library equivalents, clear error mapping, no architectural changes. Confidence: 0.9+
+- **Medium risk**: Restructuring needed, async/concurrency differs, idioms differ. Confidence: 0.75–0.85
+- **High risk**: No direct equivalent, significant architectural change required. Confidence: 0.5–0.75
+- **Critical risk**: Language-specific behavior, not portable. Confidence: <0.5 (not recommended)
 
-- **Low risk**: Source and target libraries are well-mapped (1:1 equivalents). Error types map clearly. No architectural
-  changes needed. Domain logic is portable without modification.
-  - Example: Python `csv` → Rust `csv` crate
-  - Confidence: 0.9+
-
-- **Medium risk**: Target library exists but requires some restructuring. Error handling changes. Async/concurrency
-  model differs. Idioms differ but domain logic is portable.
-  - Example: Python `csv` + `smtplib` → Rust `csv` + `lettre` (requires tokio async restructuring)
-  - Confidence: 0.75–0.85
-
-- **High risk**: No direct equivalent library. Requires significant architectural change. New idioms, patterns, or
-  concurrency model. Test coverage must expand.
-  - Example: Python `threading` + custom job queue → Go goroutines + channels (different concurrency model, no
-    shared memory)
-  - Confidence: 0.5–0.75
-
-- **Critical risk**: Behavior is language-specific and not portable. Requires redesign or domain change. Not
-  recommended without major refactoring.
-  - Example: Python `pickle` (language-specific serialization) has no safe Go/Rust equivalent. Use protobuf/JSON
-    instead.
-  - Confidence: <0.5 (not recommended)
+See `references/EXAMPLES.md` for risk level examples and assessment patterns.
 
 ### Step 6: Generate Human-Readable Report
 
 Create `modernization-report.md` with:
+- Executive summary (module, functions analyzed, opportunities, recommended language)
+- High-confidence opportunities (risk, confidence, code reduction, effort, benefits/concerns)
+- Dependency mapping table (source library → target equivalents)
+- Per-function analysis
+- Recommendations by priority (simplification, concurrency, performance)
+- Risk summary aggregated by opportunity
 
-```markdown
-# Modernization Opportunities Report
-
-## Executive Summary
-- Module: `src.io.csv_mailer`
-- Total functions analyzed: 3
-- Modernization opportunities identified: 5
-- Recommended language: Rust (low risk, 65% code reduction)
-- Alternative: Go (low risk, 38% code reduction + concurrency benefits)
-
-## High-Confidence Opportunities (Low Risk)
-
-### Opportunity 1: Rust with serde + lettre
-- **Risk**: Medium
-- **Confidence**: 0.85
-- **Code reduction**: 45 → 12 lines (73%)
-- **Effort**: ~8 hours (4 rewrite, 3 test, 1 review)
-- **Benefits**:
-  - Type safety catches encoding/parsing errors at compile time
-  - Async SMTP is more efficient than Python's blocking I/O
-  - Single executable binary
-- **Concerns**:
-  - Must restructure for tokio async runtime
-  - Error handling is more verbose (Result<T, E> pattern matching)
-- **Libraries to learn**:
-  - `csv` (CSV parsing)
-  - `lettre` (SMTP)
-  - `tokio` (async runtime)
-
-### Opportunity 2: Go with stdlib + goroutines
-- **Risk**: Low
-- **Confidence**: 0.90
-- **Code reduction**: 45 → 28 lines (38%)
-- **Effort**: ~6 hours (3 rewrite, 2 test, 1 review)
-- **Benefits**:
-  - Goroutines enable parallel email sending (faster than Python's serial approach)
-  - All libraries are stdlib or well-established
-  - Simple error handling (error return values)
-  - Single executable, cross-platform
-- **Concerns**:
-  - Less code reduction than Rust
-  - Concurrency requires careful channel management
-
-## Dependency Mapping
-
-| Source Library | Target (Rust) | Target (Go) | Confidence | Notes |
-|---|---|---|---|---|
-| `csv` | `csv` crate | `encoding/csv` | 0.95 | Direct equivalents |
-| `smtplib` | `lettre` | `net/smtp` | 0.85–0.90 | Both solid, lettre is async |
-| `logging` | `tracing` | `log` | 0.90 | Both idiomatic |
-| `os` (env vars) | `std::env` | `os` | 0.95 | Direct equivalents |
-
-## Ecosystem Knowledge Summary
-
-### Rust Ecosystem
-- **CSV**: `csv` crate (polars for data analysis)
-- **SMTP**: `lettre` (async-first, modern)
-- **Async runtime**: `tokio` (de facto standard)
-- **Logging**: `tracing` (structured logging)
-- **Error handling**: `anyhow` or `thiserror` for ergonomic errors
-
-### Go Ecosystem
-- **CSV**: `encoding/csv` (stdlib)
-- **SMTP**: `net/smtp` (stdlib)
-- **Concurrency**: `goroutines` + `channels` (language primitives)
-- **Logging**: `log` (stdlib) or `logrus` (popular third-party)
-
-## Per-Function Analysis
-
-[Detailed analysis of send_csv_emails, _connect_smtp, _parse_csv_row, etc.]
-
-## Recommendations
-
-1. **If prioritizing code simplification**: Rewrite in Rust with `serde` + `lettre` (73% reduction, async I/O gains)
-2. **If prioritizing concurrency gains**: Rewrite in Go with goroutines (parallel email sending, simpler model)
-3. **If maintaining Python**: Upgrade to Python 3.12+ with `asyncio` + `aiosmtplib` (minor simplification)
-
-## Risk Summary by Opportunity
-- Low risk: 2 (Go + stdlib, Python + asyncio)
-- Medium risk: 2 (Rust + tokio, Java + Spring)
-- High risk: 0
-- Critical risk: 0
-
-→ **All opportunities are viable.** Choice depends on team expertise and deployment constraints.
-```
+See `references/EXAMPLES.md` for sample report structure and ecosystem mappings.
 
 ### Step 7: Integration with Migration Dashboard
 
-The `modernization-opportunities.json` feeds into the migration dashboard's **Opportunities panel**:
+The `modernization-opportunities.json` feeds into the migration dashboard's **Opportunities panel**, displaying each opportunity with ID, title, risk level, confidence score, estimated reduction, and effort hours. This allows stakeholders to view all modernization opportunities for the codebase, filter by risk level or target language, and make informed decisions about which opportunities to pursue.
 
-```json
-{
-  "module": "src.io.csv_mailer",
-  "opportunities": [
-    {
-      "id": "opp_1",
-      "title": "Rust (73% reduction, medium risk)",
-      "risk": "medium",
-      "confidence": 0.85,
-      "estimated_reduction": "45 → 12 lines",
-      "effort_hours": 8
-    },
-    {
-      "id": "opp_2",
-      "title": "Go (38% reduction + concurrency, low risk)",
-      "risk": "low",
-      "confidence": 0.90,
-      "estimated_reduction": "45 → 28 lines",
-      "effort_hours": 6
-    }
-  ]
-}
-```
-
-And updates the migration-state-tracker:
+Update the migration-state-tracker:
 
 ```bash
 python3 ../py2to3-migration-state-tracker/scripts/update_state.py <state_file> \
@@ -394,150 +156,19 @@ python3 ../py2to3-migration-state-tracker/scripts/update_state.py <state_file> \
 
 ### Per-Function Opportunity Format
 
-```json
-{
-  "function": "fully.qualified.function.name",
-  "source_language": "python",
-  "source_file": "path/to/source.py",
-  "source_lines": 45,
-  "target_language": "rust",
-  "opportunity_id": "opp_1_rust_lettre",
+Each opportunity includes:
+- Function name, source language, line count, target language, opportunity ID
+- Title and description
+- Pattern match (source → target pattern)
+- Libraries array (source → target mapping with confidence and notes)
+- Estimated reduction (lines, percentage, confidence level)
+- Risk assessment (level, confidence, reasons, mitigations)
+- Contract preservation (input/output/error/side-effect mapping)
+- Code sketch (minimal idiomatic example)
+- Ecosystem equivalents (full library mapping with version compatibility)
+- Effort estimate (rewrite, testing, review hours)
 
-  "title": "Use serde + lettre for CSV parsing and SMTP",
-  "description": "Replace csv + smtplib with Rust idioms",
-
-  "pattern_match": {
-    "source_pattern": "csv.DictReader loop + smtplib.SMTP connection",
-    "target_pattern": "serde::Deserialize + lettre::SmtpTransport"
-  },
-
-  "libraries": [
-    {
-      "source_lib": "csv",
-      "target_lib": "csv",
-      "confidence": 0.95,
-      "mapping_type": "direct_equivalent",
-      "notes": "Identical API, well-maintained"
-    },
-    {
-      "source_lib": "smtplib (stdlib)",
-      "target_lib": "lettre",
-      "confidence": 0.85,
-      "mapping_type": "library_replacement",
-      "notes": "Async-first, requires tokio restructuring"
-    },
-    {
-      "source_lib": "logging (stdlib)",
-      "target_lib": "tracing",
-      "confidence": 0.90,
-      "mapping_type": "idiomatic_upgrade",
-      "notes": "Structured logging, better for distributed systems"
-    }
-  ],
-
-  "estimated_reduction": {
-    "source_lines": 45,
-    "target_lines": 12,
-    "reduction_percent": 73,
-    "confidence": 0.80,
-    "notes": "Assumes serde macros eliminate manual parsing"
-  },
-
-  "risk_assessment": {
-    "level": "medium",
-    "confidence": 0.85,
-    "reasons": [
-      "Requires async restructuring (tokio runtime setup)",
-      "Error types change from exceptions to Result<T, E>",
-      "smtplib.SMTPAuthenticationError → lettre error types with pattern matching"
-    ],
-    "mitigations": [
-      "Lettre's error types are well-defined",
-      "Async SMTP is more performant and testable",
-      "Type safety catches many edge cases at compile time"
-    ]
-  },
-
-  "contract_preservation": {
-    "input_semantics": [
-      {
-        "contract": "csv_path: str (filesystem path)",
-        "source_impl": "str → File path",
-        "target_impl": "&str → std::fs::File::open",
-        "preserved": true
-      }
-    ],
-    "output_semantics": [
-      {
-        "contract": "returns int (count of sent emails)",
-        "source_impl": "int from counter",
-        "target_impl": "usize (Rust's count type)",
-        "preserved": true,
-        "note": "usize is unsigned, intentional for count semantics"
-      }
-    ],
-    "error_conditions": [
-      {
-        "contract": "FileNotFoundError when csv_path doesn't exist",
-        "source_impl": "open() raises FileNotFoundError",
-        "target_impl": "File::open() returns Err(io::Error)",
-        "preserved": true,
-        "pattern": "match File::open(csv_path) { Err(e) if e.kind() == io::ErrorKind::NotFound => ... }"
-      }
-    ],
-    "side_effects": [
-      {
-        "contract": "logging.info per email sent",
-        "source_impl": "logging.info() call in loop",
-        "target_impl": "tracing::info!() macro",
-        "preserved": true
-      }
-    ]
-  },
-
-  "code_sketch": {
-    "description": "Minimal, idiomatic Rust implementation demonstrating the opportunity",
-    "imports": ["csv", "lettre", "tokio"],
-    "code": "use csv::ReaderBuilder;\nuse lettre::{SmtpTransport, Transport};\nuse lettre::message::Message;\n\n#[tokio::main]\nasync fn send_csv_emails(\n    csv_path: &str,\n    smtp_host: &str,\n    port: u16,\n) -> Result<usize, Box<dyn std::error::Error>> {\n    let file = std::fs::File::open(csv_path)?;\n    let mut reader = ReaderBuilder::new()\n        .has_headers(true)\n        .from_reader(file);\n    \n    let transport = SmtpTransport::builder_dangerous(smtp_host)\n        .port(port)\n        .build()?;\n    \n    let mut count = 0;\n    for result in reader.deserialize() {\n        let (email,): (String,) = result?;\n        let msg = Message::builder()\n            .from(\"from@example.com\".parse()?)\n            .to(email.parse()?)\n            .subject(\"Test\")\n            .body(String::from(\"Test\"))?;\n        \n        match transport.send(&msg) {\n            Ok(_) => {\n                tracing::info!(email = %email, \"Sent email\");\n                count += 1;\n            }\n            Err(e) => {\n                tracing::error!(email = %email, error = ?e, \"Failed to send\");\n            }\n        }\n    }\n    Ok(count)\n}\n"
-  },
-
-  "ecosystem_equivalents": [
-    {
-      "source_lib": "csv",
-      "target_lib": "csv",
-      "crate_version": "1.3+",
-      "mapping_type": "direct",
-      "feature_parity": 0.98,
-      "notes": "Python csv module and Rust csv crate have nearly identical APIs"
-    },
-    {
-      "source_lib": "smtplib",
-      "target_lib": "lettre",
-      "crate_version": "0.11+",
-      "mapping_type": "library_replacement",
-      "feature_parity": 0.90,
-      "notes": "Lettre is more modern (async), handles more SMTP edge cases"
-    },
-    {
-      "source_lib": "logging",
-      "target_lib": "tracing",
-      "crate_version": "0.1+",
-      "mapping_type": "idiomatic_upgrade",
-      "feature_parity": 0.95,
-      "notes": "Tracing provides structured logging, better for spans and observability"
-    }
-  ],
-
-  "effort_estimate": {
-    "rewrite_hours": 4,
-    "testing_hours": 3,
-    "review_hours": 1,
-    "total_hours": 8,
-    "notes": "Effort is primarily async structuring and error mapping. Domain logic (CSV reading, email building) is straightforward.",
-    "dependencies": "Assumes basic Rust proficiency"
-  }
-}
-```
+See `references/EXAMPLES.md` for complete JSON structure with all fields populated.
 
 ## Model Tier
 

@@ -152,277 +152,22 @@ The script produces a comprehensive report showing:
 
 ## Removal Patterns
 
-### 1. `__future__` Imports
+The script removes 12 categories of compatibility shims:
 
-**Before**:
-```python
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-from __future__ import absolute_import
+1. **__future__ imports**: Remove all except `annotations` (if target < 3.14)
+2. **six type checks**: Replace with str, int, bytes
+3. **six iteration methods**: Replace with dict.items(), values(), keys()
+4. **six moves**: Remove imports, use built-ins or Py3 stdlib
+5. **six ensure functions**: Replace with type-aware code
+6. **six version checks**: Keep only Py3 branch, delete Py2 branch
+7. **six metaclass decorator**: Convert to class signature
+8. **six unicode decorator**: Remove (Py3 has __str__ only)
+9. **sys.version_info guards**: Collapse to Py3 branch
+10. **try-except import guards**: Keep Py3 import, delete except clause
+11. **builtins imports**: Remove (built-ins available without import)
+12. **dependencies**: Remove six and python-future from requirements.txt, setup.py, pyproject.toml
 
-print("Hello")
-x = 5 / 2  # Now float
-```
-
-**After**:
-```python
-print("Hello")
-x = 5 / 2  # Float in Py3
-```
-
-**Rule**: Delete all `__future__` imports except `annotations` (if target < 3.14).
-
-### 2. six Type Checks
-
-**Before**:
-```python
-import six
-
-if isinstance(x, six.string_types):
-    ...
-
-if isinstance(x, six.integer_types):
-    ...
-
-if isinstance(x, six.binary_type):
-    ...
-```
-
-**After**:
-```python
-if isinstance(x, str):
-    ...
-
-if isinstance(x, int):
-    ...
-
-if isinstance(x, bytes):
-    ...
-```
-
-**Mappings**:
-- `six.text_type` → `str`
-- `six.binary_type` → `bytes`
-- `six.string_types` → `(str,)`
-- `six.integer_types` → `(int,)`
-
-### 3. six Iteration Methods
-
-**Before**:
-```python
-import six
-
-for k, v in six.iteritems(d):
-    ...
-
-for v in six.itervalues(d):
-    ...
-
-for k in six.iterkeys(d):
-    ...
-```
-
-**After**:
-```python
-for k, v in d.items():
-    ...
-
-for v in d.values():
-    ...
-
-for k in d.keys():
-    ...
-```
-
-### 4. six Moves (imports)
-
-**Before**:
-```python
-from six.moves import range, input
-from six.moves.urllib.parse import urlencode
-
-for i in range(10):
-    x = input("Enter value: ")
-    url = f"?{urlencode(params)}"
-```
-
-**After**:
-```python
-# No imports needed (built-ins)
-
-for i in range(10):
-    x = input("Enter value: ")
-    url = f"?{urlencode(params)}"  # from urllib.parse import urlencode
-```
-
-### 5. six Ensure Functions
-
-**Before**:
-```python
-import six
-
-s = six.ensure_str(data)
-t = six.ensure_text(data)
-```
-
-**After**:
-```python
-s = data if isinstance(data, str) else data.decode('utf-8')
-t = data if isinstance(data, str) else data.decode('utf-8')
-
-# Or simply (if no encoding concerns):
-s = str(data)
-t = str(data)
-```
-
-### 6. six Python Version Checks
-
-**Before**:
-```python
-import six
-
-if six.PY2:
-    # Py2-specific code
-    x = unicode(s)
-else:
-    # Py3-specific code
-    x = str(s)
-```
-
-**After**:
-```python
-x = str(s)  # Always Py3 now
-```
-
-**Optimization**: After simplification, often further optimization is possible:
-- Remove entire conditionals if only one branch remains
-- Collapse nested conditionals
-
-### 7. six Metaclass Decorator
-
-**Before**:
-```python
-import six
-
-@six.add_metaclass(MetaClass)
-class MyClass:
-    ...
-```
-
-**After**:
-```python
-class MyClass(metaclass=MetaClass):
-    ...
-```
-
-### 8. six Unicode Decorator
-
-**Before**:
-```python
-import six
-
-@six.python_2_unicode_compatible
-class MyClass:
-    def __str__(self):
-        return "text"
-```
-
-**After**:
-```python
-class MyClass:
-    def __str__(self):
-        return "text"
-```
-
-### 9. sys.version_info Guards
-
-**Before**:
-```python
-import sys
-
-if sys.version_info[0] == 2:
-    # Py2-specific code
-    range_func = xrange
-    str_type = unicode
-else:
-    # Py3-specific code
-    range_func = range
-    str_type = str
-
-result = range_func(10)
-```
-
-**After**:
-```python
-result = range(10)  # Py3 only
-```
-
-### 10. Try-except Import Guards
-
-**Before**:
-```python
-try:
-    from urllib.parse import urlencode  # Py3
-except ImportError:
-    from urllib import urlencode  # Py2
-```
-
-**After**:
-```python
-from urllib.parse import urlencode  # Py3 only
-```
-
-### 11. builtins Module Imports
-
-**Before**:
-```python
-from builtins import range, bytes, str
-
-for i in range(10):
-    data = bytes([1, 2, 3])
-```
-
-**After**:
-```python
-for i in range(10):
-    data = bytes([1, 2, 3])  # No import needed
-```
-
-### 12. Cleanup: Remove six and future from Dependencies
-
-**Before** (requirements.txt):
-```
-django==3.2
-six==1.16.0
-python-future==0.18.2
-requests==2.28.0
-```
-
-**After**:
-```
-django==3.2
-requests==2.28.0
-```
-
-**Before** (setup.py):
-```python
-setup(
-    name="myapp",
-    install_requires=[
-        "six>=1.15.0",
-        "python-future>=0.18.0",
-    ],
-)
-```
-
-**After**:
-```python
-setup(
-    name="myapp",
-    install_requires=[],
-)
-```
+See `references/EXAMPLES.md` for detailed before/after examples for all 12 categories and removal matrix.
 
 ---
 
@@ -476,57 +221,17 @@ The skill has succeeded when:
 
 ### Type Hints and Annotations
 
-If using type hints:
-
-**Before**:
-```python
-from __future__ import annotations  # Deferred evaluation for Py3.7+
-from typing import Optional, List
-
-def process(items: List[str]) -> Optional[str]:
-    ...
-```
-
-**After** (if target >= 3.10):
-```python
-def process(items: list[str]) -> str | None:
-    ...
-```
-
-**Note**: Keep `from __future__ import annotations` only if target < 3.14 and using string annotations.
+Keep `from __future__ import annotations` only if target < 3.14 and using string annotations. If target >= 3.10, modernize to use native union syntax (list[str] instead of List[str], str | None instead of Optional[str]).
 
 ### Deprecated Modules
 
-Some modules moved between Py2 and Py3:
-
-**Before**:
-```python
-try:
-    import configparser  # Py3
-except ImportError:
-    import ConfigParser as configparser  # Py2
-```
-
-**After**:
-```python
-import configparser  # Py3 only
-```
+Modules that moved between Py2 and Py3: Use try-except import pattern removal. Keep only Py3 import.
 
 ### Unicode Literals
 
-In Py2, string literals were bytes by default. In Py3, they're Unicode.
+In Py2, string literals were bytes by default. In Py3, they're Unicode. Remove `from __future__ import unicode_literals` — all string literals are already Unicode in Py3.
 
-**Before**:
-```python
-from __future__ import unicode_literals
-
-message = "Hello"  # Unicode in both Py2 and Py3
-```
-
-**After**:
-```python
-message = "Hello"  # Always Unicode in Py3
-```
+See `references/EXAMPLES.md` for special case examples: type hints, deprecated modules, and unicode literals.
 
 ---
 

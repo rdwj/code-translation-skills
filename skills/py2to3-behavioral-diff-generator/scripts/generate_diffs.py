@@ -112,6 +112,31 @@ DEFAULT_EXPECTED_PATTERNS = [
         "py2_regex": r"\b0(\d{3,})\b",
         "py3_equivalent": r"0o\1",
     },
+    {
+        "name": "integer_division",
+        "description": "Integer division: 7/2 returns 3 in Py2, 3.5 in Py3",
+        "type": "division_semantics",
+    },
+    {
+        "name": "mixed_type_sort",
+        "description": "sorted() with mixed int/str raises TypeError in Py3 (allowed in Py2)",
+        "type": "type_comparison",
+    },
+    {
+        "name": "bytes_str_equality",
+        "description": "b'x' == 'x' returns False in Py3 (True in Py2 in some contexts)",
+        "type": "bytes_str_boundary",
+    },
+    {
+        "name": "relative_import",
+        "description": "Implicit relative imports fail in Py3 (must use explicit relative imports)",
+        "type": "import_behavior",
+    },
+    {
+        "name": "true_false_identity",
+        "description": "True/False are singleton objects; identity checks work but equality is preferred",
+        "type": "boolean_semantics",
+    },
 ]
 
 
@@ -628,11 +653,18 @@ def generate_report(
     # Categorize diffs by type
     diff_types = Counter()
     bug_types = Counter()
+    unclassified_diffs = []
+
     for tc in test_comparisons:
         for diff in tc["diffs"]:
             diff_types[diff["type"]] += 1
             if diff["category"] == "potential_bug":
                 bug_types[diff["type"]] += 1
+            elif diff["category"] == "unclassified":
+                unclassified_diffs.append({
+                    "test_id": tc["test_id"],
+                    "diff": diff,
+                })
 
     report = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -644,6 +676,7 @@ def generate_report(
             "tests_with_potential_bugs": tests_with_bugs,
             "total_expected_diffs": total_expected,
             "total_potential_bugs": total_potential_bugs,
+            "total_unclassified": len(unclassified_diffs),
             "pass_rate": (
                 (total_tests - tests_with_bugs) / total_tests * 100
                 if total_tests > 0
@@ -687,6 +720,16 @@ def generate_report(
         ],
     }
     save_json(bugs, str(output_dir / "potential-bugs.json"))
+
+    # Write flagged for review (unclassified diffs for Sonnet analysis)
+    if unclassified_diffs:
+        flagged = {
+            "timestamp": report["timestamp"],
+            "total": len(unclassified_diffs),
+            "note": "These diffs could not be automatically classified. Review needed.",
+            "diffs": unclassified_diffs,
+        }
+        save_json(flagged, str(output_dir / "flagged-for-review.json"))
 
     # Write raw outputs
     save_json(py2_outputs, str(output_dir / "py2-outputs.json"))

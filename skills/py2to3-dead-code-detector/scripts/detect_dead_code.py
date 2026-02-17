@@ -237,6 +237,32 @@ class CodeAnalyzer(ast.NodeVisitor):
 
         self.generic_visit(node)
 
+    def visit_Return(self, node: ast.Return):
+        """Track unreachable code after return statements."""
+        self.generic_visit(node)
+
+    def visit_Raise(self, node: ast.Raise):
+        """Track unreachable code after raise statements."""
+        self.generic_visit(node)
+
+    def _check_unreachable_code(self, body: List[ast.stmt]) -> None:
+        """Check for unreachable code in a block (after return/raise)."""
+        for i, stmt in enumerate(body):
+            if i == 0:
+                continue
+            # Check if previous statement is terminal (return/raise)
+            prev = body[i - 1]
+            is_terminal = isinstance(prev, (ast.Return, ast.Raise))
+            if is_terminal:
+                # Current statement is unreachable
+                end = stmt.end_lineno or stmt.lineno
+                self.dead_blocks.append({
+                    "lineno": stmt.lineno,
+                    "endlineno": end,
+                    "reason": "Code after return/raise statement (unreachable)",
+                    "confidence": "HIGH",
+                })
+
     def _get_decorator_name(self, node: ast.AST) -> str:
         """Extract decorator name."""
         if isinstance(node, ast.Name):
@@ -274,6 +300,11 @@ def analyze_file(filepath: str) -> Dict[str, Any]:
 
     analyzer = CodeAnalyzer(filepath, content)
     analyzer.visit(tree)
+
+    # Check for unreachable code in functions
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            analyzer._check_unreachable_code(node.body)
 
     return {
         "functions": analyzer.functions,
@@ -510,6 +541,23 @@ def main():
     safe_path = os.path.join(args.output, "safe-to-remove.json")
     save_json(safe_removals, safe_path)
     print(f"Wrote: {safe_path}")
+
+    # Extract medium/low confidence items for review
+    flagged_for_review = {
+        "target_version": report.get("target_version"),
+        "total_flagged": 0,
+        "findings": [],
+    }
+
+    for finding in report.get("findings", []):
+        if finding.get("confidence") in ("MEDIUM", "LOW"):
+            flagged_for_review["findings"].append(finding)
+            flagged_for_review["total_flagged"] += 1
+
+    if flagged_for_review["total_flagged"] > 0:
+        flagged_path = os.path.join(args.output, "flagged-for-review.json")
+        save_json(flagged_for_review, flagged_path)
+        print(f"Wrote: {flagged_path}")
 
     # Print summary
     print()
