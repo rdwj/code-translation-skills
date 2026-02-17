@@ -8,6 +8,8 @@ description: >
   or generate a version compatibility matrix for different Python 3 target versions. Also
   trigger when someone says things like "scan this codebase," "what's the migration risk,"
   "how big is this conversion," "analyze imports," or "what Python 2 patterns are in here."
+  For polyglot codebases or when ast.parse() fails on Python 2 syntax, this skill now
+  delegates to the universal-code-graph skill for tree-sitter-based analysis.
 ---
 
 # Codebase Analyzer
@@ -20,12 +22,22 @@ versions are feasible.
 This skill is the foundation of the entire migration — every other skill in the suite
 depends on its outputs. Take the time to be thorough.
 
+**Enhanced with tree-sitter:** This skill now supports a two-pipeline approach. Python files
+that parse under `ast` still use the battle-tested `Py2PatternVisitor`. Files that fail
+`ast.parse()` (Python 2 syntax like `print "hello"` or `except Error, e:`) are analyzed
+via tree-sitter, which provides error-recovery parsing that extracts imports, definitions,
+and patterns from the parseable portions of the file. Non-Python files in polyglot codebases
+are also analyzed via tree-sitter. For full polyglot analysis, use the `universal-code-graph`
+skill directly — this skill focuses on the Python 2→3 migration perspective.
+
 ## When to Use
 
 - Before starting any Python 2 → 3 migration work
 - When stakeholders need a scope/timeline estimate
 - When you need to determine the migration order for modules
 - When assessing whether a codebase can target Python 3.12+ (which removed many stdlib modules)
+- When `ast.parse()` fails on Python 2 files and you need better coverage than regex fallback
+- When the codebase contains non-Python files that participate in the dependency graph
 
 ## Inputs
 
@@ -42,11 +54,13 @@ All outputs go into a `migration-analysis/` directory at the codebase root (or a
 |------|--------|---------|
 | `migration-report.md` | Markdown | Human-readable summary with key findings and recommendations |
 | `migration-report.json` | JSON | Machine-readable full analysis (consumed by other skills) |
-| `dependency-graph.json` | JSON | Module dependency graph with import relationships |
-| `dependency-graph.html` | HTML | Interactive force-directed visualization of the dependency graph (open in browser) |
+| `dependency-graph.json` | JSON | Module dependency graph with import relationships. Nodes now include `language` property. |
+| `dependency-graph.html` | HTML | Interactive force-directed visualization (language color-coded when polyglot) |
 | `migration-order.json` | JSON | Topologically sorted conversion order with cluster groupings |
 | `version-matrix.md` | Markdown | Compatibility assessment per target Python 3 version |
 | `py2-ism-inventory.json` | JSON | Every Python 2 pattern found, categorized and located |
+| `call-graph.json` | JSON | Function/method-level call relationships (NEW — when tree-sitter is available) |
+| `language-summary.json` | JSON | Detected languages and file counts (NEW — when tree-sitter is available) |
 
 ## Scope and Chunking
 
@@ -89,8 +103,21 @@ The script uses Python's `ast` module to parse each file and extract:
 - Shebang lines
 
 If a file fails to parse under Python 3's ast (which it will for files with Python 2-only
-syntax like `print "hello"`), the script falls back to regex-based detection. This is
-expected and fine — the point is to inventory, not to run the code.
+syntax like `print "hello"`), the script falls back in two stages:
+
+1. **Tree-sitter fallback** (preferred): If tree-sitter is available, the file is parsed
+   using the tree-sitter Python grammar. Tree-sitter does error-recovery parsing — it
+   produces a concrete syntax tree even for Python 2 constructs, marking unparseable
+   regions as ERROR nodes while continuing with the rest. This gives us imports, function
+   definitions, class definitions, and Python 2 pattern detection (via `Py2PatternDetectorTS`)
+   from the parseable portions. This is a major improvement over regex-only.
+
+2. **Regex fallback** (legacy): If tree-sitter is not available, the script falls back to
+   regex-based detection as before. This still works but misses function definitions, class
+   hierarchies, and import relationships that tree-sitter captures.
+
+The tree-sitter fallback is transparent — same output format, same findings dicts, same
+risk scoring. A `parser: "tree-sitter"` field distinguishes these results from ast-parsed ones.
 
 ### Step 2: Build the Dependency Graph
 
@@ -348,6 +375,83 @@ Python 3.13 continued removals. The version compatibility matrix is not optional
 directly affects migration scope and timeline. Always check
 `references/stdlib-removals-by-version.md` for the authoritative list.
 
+## Tree-sitter Enhanced Analysis
+
+When tree-sitter is available (installed via `pip install tree-sitter tree-sitter-language-pack`),
+this skill gains several capabilities:
+
+**Better Python 2 coverage:** Files that fail `ast.parse()` are no longer limited to regex
+detection. Tree-sitter extracts all the same patterns as `Py2PatternVisitor` via S-expression
+queries, plus imports, definitions, and call relationships from the parseable portions.
+
+**Polyglot awareness:** If the codebase contains non-Python files (Java, C, JavaScript, etc.),
+the dependency graph includes them as nodes with a `language` property. This matters for
+codebases with C extensions, Java backends, or mixed-language services.
+
+**Call graph extraction:** In addition to module-level import dependencies, tree-sitter
+enables function-level call graph extraction. This feeds into the behavioral-contract-extractor
+and work-item-generator for atomic work decomposition.
+
+**Language detection:** A two-pass detection system (file extension + `identify` library
+for shebang detection, with `pygments` as fallback for ambiguous files) determines the
+language of each file before parsing. Only detected languages have their tree-sitter
+grammars loaded.
+
+### Using the enhanced pipeline
+
+```bash
+# Standard analysis (uses tree-sitter automatically if available)
+python3 scripts/analyze.py <codebase_path> --output <output_dir>
+
+# Or use the universal analyzer directly for full polyglot analysis
+python3 ../universal-code-graph/scripts/analyze_universal.py <codebase_path> \
+    --output <output_dir> \
+    [--languages python java c]
+```
+
+The standard `analyze.py` script detects tree-sitter availability and uses it as a
+fallback. The `analyze_universal.py` script from the universal-code-graph skill provides
+the full polyglot pipeline. Both produce compatible output.
+
+### Depends Enrichment (Optional)
+
+When multilang-depends is available (requires JRE), it provides additional file-level
+dependency edges that validate and enrich the tree-sitter analysis. See the
+universal-code-graph skill for details.
+
+## Atomic Work Decomposition
+
+The analysis outputs from this skill feed directly into the work-item-generator skill,
+which decomposes findings into atomic, model-appropriate work items:
+
+- **Haiku-tier** (~70% of findings): Mechanical pattern fixes — `has_key`, `xrange`,
+  `print` statement, `except` syntax, stdlib renames. Each work item is self-contained
+  with full context, expected result, and verification step.
+
+- **Sonnet-tier** (~25%): Complex patterns — string/bytes mixing, metaclass changes,
+  `struct.pack/unpack`, encoding issues. Need moderate reasoning.
+
+- **Opus-tier** (~5%): Architectural decisions — C extensions, custom codecs, dynamic
+  patterns, thread safety concerns. Need full-codebase reasoning.
+
+The raw-scan.json output includes pattern classifications that drive this routing.
+See the work-item-generator skill for details on the decomposition.
+
+## Integration with New Skills
+
+This skill's outputs now feed into an expanded ecosystem:
+
+| Downstream skill | What it reads | Purpose |
+|-----------------|---------------|---------|
+| universal-code-graph | (upstream) | Provides tree-sitter pipeline this skill can delegate to |
+| behavioral-contract-extractor | raw-scan.json, call-graph.json | Infers per-function behavioral contracts |
+| work-item-generator | raw-scan.json, dependency-graph.json | Produces atomic work items with model routing |
+| haiku-pattern-fixer | (via work items) | Executes mechanical fixes at scale |
+| translation-verifier | (via contracts) | Verifies behavioral equivalence post-migration |
+| modernization-advisor | (via contracts) | Suggests idiomatic target-language alternatives |
+| migration-dashboard | dependency-graph.json, migration-state.json | Visual progress tracking |
+
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
+- `ARCHITECTURE-universal-code-graph.md` — Full architecture for the universal code graph system

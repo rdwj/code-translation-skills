@@ -8,7 +8,7 @@ description: >
   stakeholders. Also trigger when someone says "what's the migration status," "which modules
   are in phase 2," "can we advance the SCADA modules," "record this decision," or "show me
   the migration dashboard." This is the central coordination point — every other skill in
-  the migration suite reads from and writes to the state file this skill manages.
+  the migration suite reads from and writes to the state file this skill manages. This skill's schema now includes language detection, behavioral equivalence confidence, modernization opportunities, and model-tier tracking to support multi-language migration and atomic work decomposition.
 ---
 
 # Migration State Tracker
@@ -64,7 +64,10 @@ The state file has this top-level structure:
   "summary": {
     "total_modules": 0,
     "by_phase": { "0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "5": 0 },
-    "by_risk": { "low": 0, "medium": 0, "high": 0, "critical": 0 }
+    "by_risk": { "low": 0, "medium": 0, "high": 0, "critical": 0 },
+    "by_language": {},
+    "behavioral_confidence_avg": null,
+    "model_tier_usage": {"haiku": 0, "sonnet": 0, "opus": 0}
   }
 }
 ```
@@ -126,7 +129,12 @@ Each module entry tracks:
     "test_coverage_percent": null,
     "dependency_fan_in": 7,
     "dependency_fan_out": 3
-  }
+  },
+  "language": "python",
+  "behavioral_equivalence_confidence": null,
+  "modernization_opportunities": [],
+  "model_tier_used": null,
+  "behavioral_contract_summary": null
 }
 ```
 
@@ -139,6 +147,7 @@ tracker manages them:
 ```json
 {
   "modules": ["path/to/mod_a.py", "path/to/mod_b.py"],
+  "languages": ["python"],
   "current_phase": 2,
   "dependencies": ["other-unit-name"],
   "risk_score": "high",
@@ -218,6 +227,23 @@ python3 scripts/update_state.py <state_file> waiver \
     --actual-value "62%" \
     --justification "Module handles deprecated hardware no longer available for integration testing" \
     --approved-by "Wes Jackson"
+
+# Set behavioral equivalence confidence
+python3 scripts/update_state.py <state_file> set-behavioral-confidence \
+    --module "src/scada/modbus_reader.py" \
+    --confidence 0.92
+
+# Record a modernization opportunity
+python3 scripts/update_state.py <state_file> add-modernization-opportunity \
+    --module "src/scada/modbus_reader.py" \
+    --target-language rust \
+    --suggestion "Replace struct.pack/unpack with serde for safer binary handling" \
+    --risk medium
+
+# Record which model tier was used for migration
+python3 scripts/update_state.py <state_file> set-model-tier \
+    --module "src/scada/modbus_reader.py" \
+    --tier sonnet
 ```
 
 ### Query State
@@ -250,6 +276,18 @@ python3 scripts/query_state.py <state_file> by-risk --risk high
 
 # Show timeline projection based on velocity
 python3 scripts/query_state.py <state_file> timeline
+
+# Show modules by language
+python3 scripts/query_state.py <state_file> by-language --language python
+
+# Show modernization opportunities
+python3 scripts/query_state.py <state_file> modernization-opportunities
+
+# Show modules with low behavioral confidence
+python3 scripts/query_state.py <state_file> behavioral-confidence --threshold 0.8
+
+# Show model tier usage and cost estimate
+python3 scripts/query_state.py <state_file> model-tier-usage
 ```
 
 ## Integration with Other Skills
@@ -302,6 +340,23 @@ The `dashboard` command produces a markdown summary like:
 - Modules advanced this week: 12
 - Average time per module (Phase 1→2): 2.3 days
 - Projected completion: [date estimate]
+
+## Language Breakdown
+- Python: 135 modules (92%)
+- C: 8 modules (5%)
+- Java: 4 modules (3%)
+
+## Behavioral Confidence
+- High (>0.8): 45 modules
+- Moderate (0.5-0.8): 12 modules
+- Low (<0.5): 3 modules
+- Not assessed: 87 modules
+
+## Model Tier Usage
+- Haiku: 1,247 work items (68%)
+- Sonnet: 423 work items (23%)
+- Opus: 87 work items (5%)
+- Estimated cost savings vs Opus-only: ~85%
 ```
 
 ## Important Design Choices

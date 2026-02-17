@@ -9,7 +9,7 @@ description: >
   check. Also trigger when someone says "compare Py2 vs Py3 output," "are there behavioral
   differences," "run the diff check," "does the migration break anything," or "generate
   the behavioral diff report." This is the primary correctness proof — zero unexpected
-  diffs is the gate criterion for advancing to Phase 5.
+  diffs is the gate criterion for advancing to Phase 5. This skill now also integrates with behavioral contracts from the behavioral-contract-extractor for targeted test generation and contract-based verification.
 ---
 
 # Skill 4.1: Behavioral Diff Generator
@@ -56,6 +56,7 @@ produces a clear report for human review.
 | **--modules** | User | Specific modules to test (default: all) |
 | **--capture-mode** | User | What to capture: `stdout`, `stderr`, `returncode`, `files`, `all` (default: `all`) |
 | **--expected-diffs-config** | User | Path to JSON config listing known expected differences |
+| **--behavioral-contracts** | behavioral-contract-extractor | Path to behavioral-contracts.json. When provided, generates targeted test cases for code paths not covered by existing tests. |
 
 ---
 
@@ -69,6 +70,7 @@ produces a clear report for human review.
 | **potential-bugs.json** | Diffs that need investigation |
 | **py2-outputs.json** | Raw captured outputs from Python 2 runs |
 | **py3-outputs.json** | Raw captured outputs from Python 3 runs |
+| **contract-violations.json** | Cases where code doesn't match its behavioral contract (separate from interpreter diffs) |
 
 ---
 
@@ -230,6 +232,48 @@ You can pre-configure known expected differences so they're automatically classi
   ]
 }
 ```
+
+---
+
+## Contract-Based Verification
+
+When behavioral contracts are available (from the behavioral-contract-extractor skill),
+the diff generator gains additional capabilities:
+
+### Targeted Test Generation
+
+Contracts identify code paths that existing tests don't cover. The diff generator can
+produce targeted test cases from contract specifications:
+
+- For each `error_condition` in a contract, generate a test that triggers that condition
+- For each `implicit_behavior` flagged as risky, generate a test that exercises it
+- For each `side_effect`, generate a test that verifies it occurs
+
+These generated tests supplement the existing test suite for more thorough behavioral
+comparison.
+
+### Contract Violation Detection
+
+In addition to comparing interpreter outputs, the diff generator can check whether code
+satisfies its behavioral contract:
+
+- Does the function return the type specified in the contract?
+- Does it raise the exceptions listed in `error_conditions`?
+- Are all listed `side_effects` observable?
+
+Contract violations are reported separately from interpreter diffs in
+`contract-violations.json`.
+
+### Verification Cascade Role
+
+The behavioral-diff-generator now plays a specific role in the verification cascade:
+
+1. **haiku-pattern-fixer** applies a fix and runs the function's unit test
+2. **translation-verifier** checks the function against its behavioral contract
+3. **behavioral-diff-generator** (this skill) runs the full module test suite under both interpreters
+4. **gate-checker** reads all verification results to determine phase advancement
+
+This layered approach catches progressively broader categories of regressions.
 
 ---
 

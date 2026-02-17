@@ -10,7 +10,7 @@ description: >
   mechanical migration," "generate a diff of the changes," "show me what needs to convert,"
   or "run the automatic converter." This is where the actual transformation happens — the
   mechanical equivalent of running 2to3 at scale, but with better tooling, error handling,
-  target-version awareness, and reviewability.
+  target-version awareness, and reviewability. For non-Python code translation or when working with atomic work items, this skill integrates with the haiku-pattern-fixer and behavioral contracts for verified, model-tiered conversion.
 ---
 
 # Automated Converter
@@ -342,6 +342,53 @@ for unit in $(jq -r '.waves[].units[].name' conversion-plan.json); do
 done
 ```
 
+## Integration with Universal Code Graph
+
+When behavioral contracts are available (from the behavioral-contract-extractor), the
+converter can validate that its AST transformations preserve the behavioral contract.
+After applying transformations to a file:
+
+1. Run the function's tests (as before)
+2. Additionally check the behavioral contract — do return types, error conditions, and
+   side effects match the specification?
+3. Report contract verification results alongside conversion results
+
+This adds a layer of confidence beyond just passing tests.
+
+## Model-Tier Awareness
+
+The converter can receive work items from the work-item-generator. When operating in
+work-item mode:
+
+- **Simple pattern fixes** (HAIKU_PATTERNS like has_key, xrange, print) can be delegated
+  to the haiku-pattern-fixer skill for cost-efficient batch processing. The converter
+  doesn't need to handle these itself.
+- **Complex transformations** (metaclass changes, string/bytes fixes, struct.pack rewrites)
+  still use the full ast.NodeTransformer pipeline in this skill.
+- **Work items include verification steps**, so each transformation is individually
+  verified rather than only checking at the end.
+
+In practice: the work-item-generator routes simple fixes to haiku-pattern-fixer and
+complex fixes to this skill. Both produce the same output format so downstream skills
+(behavioral-diff-generator, gate-checker) don't need to know which tool did the work.
+
+## Limitations: Non-Python Translation
+
+This skill uses Python's `ast.NodeTransformer` to modify abstract syntax trees. This
+approach is fundamentally Python-specific — it cannot transform Java, C, Rust, or other
+languages.
+
+For cross-language migration (e.g., Python → Rust, Java → Go), translation is LLM-driven
+using behavioral contracts as the specification:
+
+1. The behavioral-contract-extractor produces a contract for each function
+2. The modernization-advisor suggests idiomatic target-language implementations
+3. An LLM (Sonnet-tier) writes the target code to satisfy the contract
+4. The translation-verifier checks behavioral equivalence
+
+This workflow uses different skills — the automated-converter's role remains Python AST
+transformation. The two approaches complement each other: ast transformation for Python,
+LLM-driven for everything else.
 
 ## References
 

@@ -7,7 +7,7 @@ description: >
   Use this skill when you need to clean up legacy compatibility code, understand what can be safely
   removed post-migration, verify migration completeness, or audit for Py2 remnants. Also trigger
   when someone says "find dead code," "remove Py2 compat," "what can be deleted," "cleanup code,"
-  or "find unused imports."
+  or "find unused imports." This skill now supports tree-sitter as a fallback for files that fail ast.parse() and can detect dead code in non-Python files when the universal-code-graph skill has been run.
 ---
 
 # Skill 5.3: Dead Code Detector
@@ -211,6 +211,38 @@ Safe-to-remove report includes:
 - Safe removal order (dependencies first)
 - Line numbers and exact code snippets
 
+### Tree-sitter Fallback
+
+When tree-sitter is available and a Python file fails `ast.parse()` (Python 2 syntax),
+the dead code detector uses tree-sitter queries to extract function and class definitions
+and their call relationships. This enables dead code detection in files that would
+otherwise be skipped entirely.
+
+The tree-sitter path uses the same query files as the universal-code-graph skill:
+- `python_definitions.scm` — extracts function and class definitions
+- `python_calls.scm` — extracts call relationships
+
+Cross-referencing definitions against calls identifies functions and classes that are
+defined but never called from anywhere in the analyzed scope.
+
+### Multi-Language Dead Code Detection
+
+When the universal-code-graph skill has been run and a `call-graph.json` is available,
+the dead code detector can identify unreachable code in any supported language — not
+just Python. The analysis uses graph-based reachability:
+
+1. Start from known entry points (main functions, exported APIs, test files)
+2. Walk the call graph to find all reachable functions
+3. Any function defined but not reachable from any entry point is flagged as dead
+
+This works identically regardless of language because the call graph normalizes all
+languages into the same format. A Java method that nothing calls is dead code just
+like a Python function that nothing calls.
+
+**Additional inputs (optional):**
+- `call-graph.json` from universal-code-graph — enables graph-based reachability
+- `--entry-points` — glob patterns for known entry points (e.g., `**/main.py`, `**/app.java`)
+
 ---
 
 ## Detection Categories
@@ -328,6 +360,15 @@ The skill has succeeded when:
 9. Safe-to-remove.json contains only HIGH-confidence findings
 10. Removal order respects dependencies (dependent code removed before dependencies)
 11. Report includes line numbers, code snippets, and remediation steps
+
+---
+
+## Dependencies (Optional)
+
+For enhanced dead code detection:
+- tree-sitter + tree-sitter-language-pack — enables detection in files that fail ast
+- universal-code-graph skill outputs (call-graph.json) — enables multi-language detection
+- Neither is required; the skill falls back to ast-only analysis when unavailable
 
 ---
 

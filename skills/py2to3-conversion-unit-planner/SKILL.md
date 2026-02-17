@@ -10,6 +10,7 @@ description: >
   should we convert," "which modules go first," "show me the conversion schedule," "what's
   the critical path," "identify the gateway modules," or "group the modules for conversion."
   This is the strategic planning step before the mechanical conversion begins.
+  This skill now also integrates with the work-item-generator for atomic work decomposition and supports multi-language dependency graphs from the universal-code-graph skill.
 ---
 
 # Conversion Unit Planner
@@ -38,6 +39,8 @@ units that respect these constraints.
 - **target_version**: Target Python 3 version (affects risk scoring)
 - **max_unit_size**: Maximum modules per conversion unit (default: 10)
 - **parallelism**: How many units can be converted simultaneously (default: 3)
+- **behavioral_contracts** (optional): Path to `behavioral-contracts.json` from behavioral-contract-extractor. When provided, contracts inform risk scoring and effort estimation.
+- **work_item_mode** (optional): If `true`, also produce atomic work items via the work-item-generator. Default: `false`.
 
 ## Outputs
 
@@ -46,6 +49,7 @@ units that respect these constraints.
 | `conversion-plan.json` | JSON | Ordered conversion units with deps and risk scores |
 | `conversion-plan.md` | Markdown | Human-readable plan with timeline estimates |
 | `critical-path.json` | JSON | Longest dependency chain (minimum migration time) |
+| `work-items.json` | JSON | Atomic work items with model-tier routing (when work_item_mode=true) |
 
 ## Workflow
 
@@ -111,6 +115,16 @@ Rough effort estimates per unit based on:
 - Whether semantic fixes are expected (data layer involvement)
 - Automatable fraction from the lint baseline
 
+### 7. Work Item Integration
+When behavioral contracts are available and work_item_mode is enabled, the planner produces
+atomic work items for each finding in each unit. Items are tagged with model tiers:
+- Haiku (~70%): mechanical pattern fixes (has_key, xrange, print, except syntax)
+- Sonnet (~25%): complex semantic changes (string/bytes, metaclass, struct)
+- Opus (~5%): architectural decisions (C extensions, custom codecs, thread safety)
+
+Each work item carries its own context, verification step, and rollback command. See the
+work-item-generator skill for the full work item format.
+
 ## Conversion Plan Structure
 
 ```json
@@ -134,7 +148,10 @@ Rough effort estimates per unit based on:
           "py2_ism_count": 12,
           "lines_of_code": 340,
           "estimated_effort_hours": 4,
-          "automatable_percent": 85
+          "automatable_percent": 85,
+          "model_tier_breakdown": {"haiku": 8, "sonnet": 3, "opus": 1},
+          "behavioral_contracts_available": true,
+          "languages": ["python"]
         }
       ]
     }
@@ -185,6 +202,21 @@ for unit in conversion_plan.units:
             --module <module> \
             --unit <unit.name>
 ```
+
+## Cross-Language Planning
+
+When the dependency graph from universal-code-graph contains non-Python nodes (Java, C,
+Rust, etc.), the planner treats them equally in wave ordering — cross-language dependencies
+are respected. A Python module that imports a C extension and a Java service that calls a
+Python REST endpoint both create dependency edges.
+
+The conversion approach differs by language:
+- **Python 3-compatible files**: ast-based transformation via automated-converter
+- **Python 2 files (ast fails)**: tree-sitter analysis + haiku-pattern-fixer for mechanical fixes
+- **Non-Python files**: LLM-driven translation using behavioral contracts as specification
+
+The planner marks each unit with the primary conversion approach based on its language
+composition.
 
 ## Important Notes
 

@@ -8,7 +8,7 @@ description: >
   trigger when someone says "can this module advance," "is phase 2 complete," "run the gate
   check," "what's blocking promotion," "enforce the gate criteria," or "show me the gate
   report." This is the quality enforcement backbone — no module advances without passing
-  its gate checks, and every waiver is tracked with an explicit audit trail.
+  its gate checks, and every waiver is tracked with an explicit audit trail. Now includes behavioral contract verification as an additional gate criterion when contracts are available.
 ---
 
 # Gate Checker
@@ -80,6 +80,7 @@ from real migrations.
 | `bytes_str_boundaries_resolved` | All bytes/str boundaries have explicit handling | 100% resolved |
 | `type_hints_public` | Public interfaces have type annotations | ≥ 80% (configurable) |
 | `semantic_fixes_reviewed` | All semantic fix decisions have rationale recorded | All have rationale |
+| `behavioral_contract_verified` | Behavioral contract verification passed with confidence >= threshold | ≥ 0.8 (configurable) |
 
 ### Phase 4 → 5 (Verification → Cutover)
 
@@ -90,6 +91,7 @@ from real migrations.
 | `encoding_stress_pass` | Encoding stress tests pass | 100% pass rate |
 | `completeness_100` | Migration completeness checker reports done | 100% |
 | `stakeholder_signoff` | Stakeholder has signed off on cutover | Boolean |
+| `behavioral_contract_verified` | Behavioral contract verification passed with confidence >= threshold | ≥ 0.8 (configurable) |
 
 ### Phase 5 Done (Cutover Complete)
 
@@ -219,6 +221,7 @@ by other skills in the suite:
 | `behavioral-diff-report.json` | Skill 4.1 (Behavioral Diff Generator) | Zero behavioral diffs |
 | `encoding-stress-report.json` | Skill 4.3 (Encoding Stress Tester) | Encoding stress pass |
 | `completeness-report.json` | Skill 4.4 (Migration Completeness Checker) | 100% completeness |
+| `verification-result.json` | Skill 4.2 (Translation Verifier) | Behavioral contract verification |
 
 If an evidence file is missing, the corresponding criterion is marked as `not_evaluated`
 (which counts as a failure unless waived).
@@ -306,6 +309,48 @@ are sensible starting points but shouldn't be sacred.
 from a failed check. "Not evaluated" means the prerequisite skill hasn't run yet; "fail"
 means it ran and the result didn't meet the threshold. This distinction helps diagnose
 what work is actually needed.
+
+## Behavioral Contract Verification Gate
+
+When behavioral contracts are available (from the behavioral-contract-extractor skill),
+the gate checker adds an additional criterion: `behavioral_contract_verified`.
+
+### How it works
+
+The translation-verifier skill produces a confidence score (0.0-1.0) for each module
+by testing the translated code against its behavioral contract. The gate checker reads
+these scores and requires them to meet a configurable threshold.
+
+### Configuration
+
+```json
+{
+  "behavioral_contract_gate": {
+    "enabled": true,
+    "confidence_threshold": 0.8,
+    "applies_to_phases": [3, 4],
+    "skip_if_no_contracts": true
+  }
+}
+```
+
+- **enabled**: Whether to enforce the behavioral contract gate. Default: `true`.
+- **confidence_threshold**: Minimum confidence score required. Default: `0.8`.
+- **applies_to_phases**: Which phase transitions require this gate. Default: `[3, 4]`.
+- **skip_if_no_contracts**: If `true`, the gate is skipped (not failed) when no contracts
+  exist for a module. Default: `true`. Set to `false` to require contracts for all modules.
+
+### Integration
+
+The behavioral contract gate reads from:
+- `verification-result.json` produced by the translation-verifier skill
+- `behavioral-contracts.json` produced by the behavioral-contract-extractor skill
+- `migration-state.json` for the module's `behavioral_equivalence_confidence` field
+
+When a module fails this gate, the gate report includes:
+- Current confidence score vs threshold
+- List of contract clauses that failed verification
+- Suggested remediation (re-run translation-verifier after fixing issues)
 
 ## References
 
