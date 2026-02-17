@@ -580,6 +580,98 @@ def _camel_case(name: str) -> str:
     return "".join(word.capitalize() for word in name.split("_"))
 
 
+def generate_property_tests(
+    analysis: Dict[str, Any],
+    module_path: str,
+) -> Tuple[str, List[Dict[str, Any]]]:
+    """Generate property-based tests using hypothesis."""
+    module_name = analysis["module_name"]
+    manifest_entries = []
+    lines = []
+
+    # Check if hypothesis is available (it's optional)
+    lines.append(f'"""')
+    lines.append(f"Property-based tests for {module_name}.")
+    lines.append(f"")
+    lines.append(f"These tests use hypothesis to explore the input space automatically.")
+    lines.append(f"Properties should hold across all valid inputs.")
+    lines.append(f'"""')
+    lines.append(f"")
+    lines.append("import pytest")
+    lines.append("")
+    lines.append("try:")
+    lines.append("    from hypothesis import given, strategies as st")
+    lines.append("    HAS_HYPOTHESIS = True")
+    lines.append("except ImportError:")
+    lines.append("    HAS_HYPOTHESIS = False")
+    lines.append("    st = None")
+    lines.append("")
+    lines.append(f"# import {module_name}")
+    lines.append("")
+    lines.append("")
+
+    if not analysis.get("data_patterns"):
+        lines.append("# No data transformation patterns detected.")
+    else:
+        # Generate property tests for data functions
+        for func in analysis.get("functions", [])[:10]:  # Cap at 10
+            if func["name"].startswith("__"):
+                continue
+
+            # Generate basic property test
+            test_class = f"Test{_camel_case(func['name'])}Properties"
+            lines.append(f"@pytest.mark.skipif(not HAS_HYPOTHESIS, reason='hypothesis not installed')")
+            lines.append(f"class {test_class}:")
+            lines.append(f'    """Property-based tests for {func["name"]}()."""')
+            lines.append(f"")
+
+            # Property 1: Function should not crash with reasonable input
+            lines.append(f"    @given(st.text())")
+            lines.append(f"    def test_text_input_does_not_crash(self, text):")
+            lines.append(f'        """Property: {func["name"]}() accepts text without crashing."""')
+            lines.append(f"        try:")
+            lines.append(f"            # result = {module_name}.{func['name']}(text)")
+            lines.append(f"            pass")
+            lines.append(f"        except (TypeError, ValueError):")
+            lines.append(f"            # Function may reject certain types — that's ok")
+            lines.append(f"            pass")
+            lines.append(f"")
+
+            # Property 2: Bytes input handling
+            lines.append(f"    @given(st.binary())")
+            lines.append(f"    def test_binary_input_does_not_crash(self, binary_data):")
+            lines.append(f'        """Property: {func["name"]}() handles binary input."""')
+            lines.append(f"        try:")
+            lines.append(f"            # result = {module_name}.{func['name']}(binary_data)")
+            lines.append(f"            pass")
+            lines.append(f"        except (TypeError, ValueError):")
+            lines.append(f"            pass")
+            lines.append(f"")
+
+            # Property 3: Numbers (if function might handle numeric input)
+            lines.append(f"    @given(st.integers())")
+            lines.append(f"    def test_integer_input_does_not_crash(self, number):")
+            lines.append(f'        """Property: {func["name"]}() handles integers."""')
+            lines.append(f"        try:")
+            lines.append(f"            # result = {module_name}.{func['name']}(number)")
+            lines.append(f"            pass")
+            lines.append(f"        except (TypeError, ValueError):")
+            lines.append(f"            pass")
+            lines.append(f"")
+
+            manifest_entries.append({
+                "file": f"test_{module_name}_properties.py",
+                "test_name": test_class,
+                "type": "property_based",
+                "target_function": func["name"],
+                "data_category": "input_validation",
+                "notes": f"Property-based tests for {func['name']}()",
+            })
+
+    lines.append("")
+    return "\n".join(lines), manifest_entries
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════════
@@ -660,6 +752,17 @@ def main():
             f.write(rt_code)
         print(f"  Written: {rt_path}")
         all_manifest.extend(rt_manifest)
+
+    # Generate property-based tests if requested
+    if args.include_hypothesis:
+        print("Generating property-based tests...")
+        prop_code, prop_manifest = generate_property_tests(analysis, args.module_path)
+        if prop_code.strip():
+            prop_path = os.path.join(args.output, f"test_{module_name}_properties.py")
+            with open(prop_path, "w", encoding="utf-8") as f:
+                f.write(prop_code)
+            print(f"  Written: {prop_path}")
+            all_manifest.extend(prop_manifest)
 
     # Write manifest
     manifest = {

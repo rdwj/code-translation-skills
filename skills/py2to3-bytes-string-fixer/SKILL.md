@@ -103,34 +103,9 @@ This is the highest-context-cost skill in the suite. Bytes/string boundary analy
 ### 1. Load Phase 0 Boundary Map
 
 The Phase 0 Data Format Analyzer produces a `bytes-str-boundaries.json` listing every AST node
-where bytes and str interact. This includes:
+where bytes and str interact, including file, line, boundary type, source variable, destination usage, context, and confidence scores.
 
-```json
-{
-  "boundaries": [
-    {
-      "file": "scada/modbus.py",
-      "line": 45,
-      "type": "socket_recv",
-      "source_var": "data",
-      "dest_usage": "struct.unpack",
-      "context": "frame_parser()",
-      "confidence_bytes": 0.95,
-      "confidence_text": 0.05
-    },
-    {
-      "file": "legacy/ebcdic.py",
-      "line": 12,
-      "type": "open_binary",
-      "source_var": "file_handle",
-      "dest_usage": "string_comparison",
-      "context": "read_cobol_record()",
-      "confidence_bytes": 0.60,
-      "confidence_text": 0.40
-    }
-  ]
-}
-```
+See `references/EXAMPLES.md` for sample boundary map structure.
 
 Load this JSON as the **starting point** for all downstream analysis.
 
@@ -140,279 +115,67 @@ For every boundary in the map, determine its classification:
 
 #### **BYTES-NATIVE** (keep as bytes)
 
-High confidence that data should remain bytes throughout:
+High confidence that data should remain bytes throughout: struct.pack/unpack, socket.recv/send, os.read, file I/O in 'rb' mode, serial port reads, CRC/checksum calculations.
 
-- **struct.pack/unpack**: Results are bytes; parsing struct fields happens on bytes.
-  ```python
-  # Bytes-native: struct.unpack returns bytes, don't decode until display
-  frame = socket.recv(1024)  # bytes
-  (msg_id, flags, length) = struct.unpack('>HBH', frame[:5])  # unpack from bytes → ints
-  ```
-
-- **socket.recv/send**: Network data is bytes. Even if it contains text, the network
-  layer doesn't decode.
-  ```python
-  # Bytes-native
-  data = socket.recv(4096)  # explicitly bytes
-  socket.send(data)  # send bytes back
-  ```
-
-- **os.read / file opened in 'rb' mode**: System calls return bytes.
-  ```python
-  # Bytes-native
-  with open(filename, 'rb') as f:
-      raw_data = f.read()  # bytes
-  ```
-
-- **Serial port reads (pyserial, serial.Serial.read())**: Bytes from the wire.
-  ```python
-  # Bytes-native
-  ser = serial.Serial('/dev/ttyUSB0', 9600)
-  packet = ser.read(10)  # bytes
-  ```
-
-- **CRC/checksum calculations**: Operate on individual bytes, not characters.
-  ```python
-  # Bytes-native
-  def crc16(data: bytes) -> int:
-      for byte in data:  # iterate over ints, not chars
-          ...
-  ```
+Key principle: Data flows as bytes through parsing logic; only final display/logging should decode to str.
 
 #### **TEXT-NATIVE** (decode to str)
 
-High confidence that data is intended as text:
+High confidence that data is intended as text: str.format/%, print()/logging, UI display, configuration files, JSON serialization, database string columns.
 
-- **str.format / % formatting**: String building for output/logging.
-  ```python
-  # Text-native
-  msg = f"Received {count} items"  # str, not bytes
-  print(msg)
-  ```
-
-- **print() / logging**: Display layer always uses str.
-  ```python
-  # Text-native
-  log.info(f"Frame ID: {frame_id}")  # str for logging
-  ```
-
-- **UI display / configuration files**: User-facing strings.
-  ```python
-  # Text-native
-  config_value = config.get('name')  # str for display
-  ```
-
-- **JSON serialization output**: json.dumps() expects str (or objects), not bytes.
-  ```python
-  # Text-native
-  json_str = json.dumps(data)  # str, not bytes
-  ```
-
-- **Database string columns**: ORM inserts text, not raw bytes (unless BLOB column).
-  ```python
-  # Text-native
-  db.insert(table='users', name=user_name)  # str
-  ```
+Key principle: Display layer always uses str.
 
 #### **MIXED/AMBIGUOUS** (needs human decision)
 
-Boundary is unclear or crosses layer boundaries in ways that need human judgment:
+Boundary is unclear or crosses layer boundaries in ways that need human judgment: data flows from binary source to string operation without explicit conversion, legacy code with implicit type mixing, encoding not specified (especially EBCDIC or non-UTF-8).
 
-- **Data flows from binary source to string operation without explicit conversion**:
-  ```python
-  # Ambiguous: is this EBCDIC or ASCII? Is it text or a binary field?
-  frame = socket.recv(512)  # bytes (binary-layer)
-  # ...later...
-  if frame[10:15] == 'HELLO':  # comparing bytes to str literal — will fail in Py3
-      # Should this be frame[10:15] == b'HELLO'? Or decode first with known codec?
-  ```
-
-- **Legacy code with implicit type mixing**:
-  ```python
-  # Ambiguous: function parameter type unclear
-  def process_record(data):
-      # data could be bytes (from file) or str (from user input)
-      # and the function doesn't document which
-      return data.split(':')  # works in Py2, crashes in Py3 if bytes
-  ```
-
-- **Encoding not specified** (especially EBCDIC or non-UTF-8 legacy codecs):
-  ```python
-  # Ambiguous: is this cp500 (international) or cp037 (US)? Are there CRC bytes?
-  data.decode()  # which codec? defaults to UTF-8 — wrong for EBCDIC!
-  ```
+See `references/EXAMPLES.md` for detailed classification examples and ambiguous case patterns.
 
 ---
 
 ### 3. Apply Automatic Fixes (High Confidence)
 
-For boundaries classified as BYTES-NATIVE or TEXT-NATIVE with confidence ≥ 0.85:
+For boundaries classified as BYTES-NATIVE or TEXT-NATIVE with confidence ≥ 0.85, apply automatic fixes:
 
-#### **BYTES-NATIVE Fixes**
+**BYTES-NATIVE fixes:**
+- Struct unpack results: Keep bytes, unpack to ints
+- File binary mode: Ensure 'rb' mode specified
+- Socket recv: Keep as bytes, assert clarity
 
-**a) Struct unpack results**
-```python
-# Before (buggy in Py3):
-data = socket.recv(256)
-(id,) = struct.unpack('>H', data[:2])
-if id == 0x1234:  # ok, ints
-    ...
+**TEXT-NATIVE fixes:**
+- Decode for display: Explicit codec on .decode()
+- File text mode: encoding='utf-8' specified
+- String formatting: Type-aware checks before concatenation
 
-# After (explicit, correct):
-data = socket.recv(256)
-assert isinstance(data, bytes), "socket.recv must return bytes"
-(id,) = struct.unpack('>H', data[:2])
-if id == 0x1234:
-    ...
-```
-
-**b) File binary mode**
-```python
-# Before (ambiguous):
-with open('protocol.dat') as f:
-    frame = f.read(512)  # Py2: bytes; Py3: str — broken!
-
-# After (explicit):
-with open('protocol.dat', 'rb') as f:
-    frame = f.read(512)  # Py3: bytes ✓
-```
-
-**c) Socket recv kept as bytes**
-```python
-# Before (implicit):
-data = conn.recv(1024)
-parsed = parse_modbus_frame(data)  # expects bytes
-
-# After (assertion for clarity):
-data = conn.recv(1024)
-assert isinstance(data, bytes), "conn.recv returns bytes in Python 3"
-parsed = parse_modbus_frame(data)
-```
-
-#### **TEXT-NATIVE Fixes**
-
-**a) Decode for display**
-```python
-# Before (py2: str is bytes, silent):
-message = socket.recv(256).decode('utf-8')
-print(message)
-
-# After (explicit codec):
-message = socket.recv(256).decode('utf-8')
-print(message)  # ✓ already correct in Py3
-```
-
-**b) File text mode with encoding**
-```python
-# Before (py2 implicit encoding):
-with open('config.ini') as f:
-    config = f.read()
-
-# After (explicit, cross-platform):
-with open('config.ini', encoding='utf-8') as f:
-    config = f.read()
-```
-
-**c) String formatting stays str**
-```python
-# Before (mixing):
-msg = "Got: " + data.decode('utf-8')
-
-# After (explicit):
-if isinstance(data, bytes):
-    msg = "Got: " + data.decode('utf-8')
-else:
-    msg = "Got: " + data
-```
+See `references/EXAMPLES.md` for detailed before/after transformation examples for all fix patterns.
 
 ---
 
 ### 4. Generate decisions-needed.json for Ambiguous Cases
 
-For boundaries with confidence between 0.5–0.85 or missing context:
+For boundaries with confidence between 0.5–0.85 or missing context, record:
+- File, line, boundary type, source code
+- Data flow context (source, current operation, next use)
+- Confidence scores (bytes vs text)
+- Decision options (with description and rationale)
+- Impact assessment (what goes wrong if we choose incorrectly)
+- Next step (who should review and what they should verify)
 
-```json
-{
-  "decisions": [
-    {
-      "file": "legacy/ebcdic.py",
-      "line": 42,
-      "boundary_type": "ambiguous_comparison",
-      "source_code": "if record[0:5] == 'XXXXX':",
-      "context": "read_mainframe_record()",
-      "data_flow": {
-        "source": "file opened as binary (rb)",
-        "current_operation": "string literal comparison",
-        "next_use": "stored in list, used in JSON export"
-      },
-      "confidence_bytes": 0.50,
-      "confidence_text": 0.50,
-      "options": [
-        {
-          "option": 1,
-          "description": "Keep as bytes, use b'XXXXX' comparison",
-          "rationale": "Data comes from binary file; comparison is field matching in EBCDIC protocol"
-        },
-        {
-          "option": 2,
-          "description": "Decode with cp500 early, compare with 'XXXXX'",
-          "rationale": "If this is text data from mainframe, EBCDIC decode is needed"
-        },
-        {
-          "option": 3,
-          "description": "Document data format in function docstring, request clarification",
-          "rationale": "Function signature doesn't specify if result is bytes or str; need developer input"
-        }
-      ],
-      "impact": "If wrong codec chosen, data will be garbled; if bytes/str mismatch, TypeError at runtime",
-      "next_step": "Review with domain expert (SCADA/mainframe) to confirm data format"
-    }
-  ]
-}
-```
+See `references/EXAMPLES.md` for complete decisions-needed.json structure with EBCDIC comparison example.
 
 ---
 
 ### 5. Record Encoding Annotations
 
-Every `.encode()` and `.decode()` call in the codebase:
+For every `.encode()` and `.decode()` call in the codebase, record:
+- File, line, operation type (encode/decode)
+- Codec used (or "None (implicit UTF-8)" if missing)
+- Context (what is being encoded/decoded)
+- Confidence score (how certain we are about this codec)
+- Risk level (low/medium/high)
+- Note (why this codec is correct or a concern)
 
-```json
-{
-  "encoding_annotations": [
-    {
-      "file": "scada/modbus.py",
-      "line": 78,
-      "operation": "decode",
-      "codec": "utf-8",
-      "context": "message logging",
-      "confidence": 0.95,
-      "risk": "low",
-      "note": "Modbus text fields (device name) are documented as ASCII/UTF-8"
-    },
-    {
-      "file": "legacy/ebcdic.py",
-      "line": 23,
-      "operation": "decode",
-      "codec": "cp500",
-      "context": "mainframe record ingestion",
-      "confidence": 0.75,
-      "risk": "medium",
-      "note": "Codec cp500 is common but variant cp037 is possible; requires verification with IBM reference"
-    },
-    {
-      "file": "legacy/ebcdic.py",
-      "line": 101,
-      "operation": "decode",
-      "codec": "None (implicit UTF-8)",
-      "context": "legacy field parsing",
-      "confidence": 0.20,
-      "risk": "high",
-      "note": "Data is EBCDIC mainframe data; UTF-8 decode will produce garbage; fix immediately"
-    }
-  ]
-}
-```
+See `references/EXAMPLES.md` for complete encoding-annotations.json structure with examples across Modbus, EBCDIC, and legacy systems.
 
 ---
 
@@ -420,42 +183,15 @@ Every `.encode()` and `.decode()` call in the codebase:
 
 Modbus and similar binary protocols require **strict bytes discipline**:
 
-1. **Read frames as bytes** from socket/serial:
-   ```python
-   # TCP Modbus:
-   data = socket.recv(256)  # bytes ✓
-   
-   # RTU (serial):
-   data = ser.read(256)  # bytes ✓
-   ```
+1. Read frames as bytes from socket/serial
+2. Parse with struct.unpack on bytes
+3. Validate CRC on bytes
+4. Build response frames in bytes
+5. Only decode for logging/display
 
-2. **Parse with struct.unpack on bytes**:
-   ```python
-   (unit_id, func_code, byte_count) = struct.unpack('>BBB', data[:3])
-   # unpack works with bytes, returns ints
-   ```
+Key principle: Data flows as bytes through the entire parsing and construction pipeline. Only the logging/display layer decodes to str.
 
-3. **Validate CRC on bytes**:
-   ```python
-   # CRC operates on raw bytes
-   crc_calc = crc16_modbus(data[:-2])  # bytes input
-   crc_recv = struct.unpack('>H', data[-2:])[0]  # bytes
-   assert crc_calc == crc_recv
-   ```
-
-4. **Build response frames in bytes**:
-   ```python
-   response = struct.pack('>BBB', unit_id, func_code, byte_count)  # bytes
-   response += register_values
-   response += struct.pack('>H', crc16_modbus(response))
-   socket.send(response)  # bytes ✓
-   ```
-
-5. **Only decode for logging/display**:
-   ```python
-   log.info(f"Sent {len(response)} bytes")  # str (count)
-   # Don't decode binary frames themselves
-   ```
+See `references/EXAMPLES.md` for complete flow example with all five steps.
 
 ---
 
@@ -463,104 +199,45 @@ Modbus and similar binary protocols require **strict bytes discipline**:
 
 Mainframe systems using EBCDIC require explicit codec specification at data ingestion:
 
-1. **Identify EBCDIC data sources** (from data-layer-report.json):
-   - Files marked as EBCDIC
-   - Functions documented as "mainframe data handler"
-   - Byte comparisons with EBCDIC-range values (0xC1–0xE9 for letters)
+1. **Identify EBCDIC data sources** from data-layer-report.json: files marked as EBCDIC, functions documented as "mainframe data handler", byte comparisons with EBCDIC-range values (0xC1–0xE9)
 
-2. **Add explicit decode at ingestion point**:
-   ```python
-   # Before (Py2 implicit, wrong in Py3):
-   with open('mainframe_export.dat', 'rb') as f:
-       records = f.read()  # bytes
-   # ...later...
-   if records[0] == 'X':  # comparing bytes to str — wrong!
-       
-   # After (explicit cp500 decode):
-   with open('mainframe_export.dat', 'rb') as f:
-       records_bytes = f.read()  # keep as bytes for now
-   records_text = records_bytes.decode('cp500', errors='replace')
-   # Now records_text is str, safe to compare with 'X'
-   ```
+2. **Add explicit decode at ingestion point**: Read file as bytes, then decode with explicit codec at clear boundary
 
-3. **Verify codec variant** (cp037, cp500, cp1047, cp273):
-   - cp500: most common (international)
-   - cp037: US/Canada
-   - cp1047: Latin-1 extended
-   - **Document which variant is used** in function docstring
+3. **Verify codec variant**: cp500 (international), cp037 (US/Canada), cp1047 (Latin-1), cp273 (German). Document which variant is used in function docstring.
 
-4. **Handle mixed records**:
-   ```python
-   # Some fields EBCDIC, some binary (e.g., timestamps as big-endian int64)
-   ebcdic_part = record[0:100].decode('cp500')  # text
-   timestamp = struct.unpack('>Q', record[100:108])[0]  # binary int
-   ```
+4. **Handle mixed records**: Some fields EBCDIC (decode), some binary (struct.unpack), all at same ingestion point
+
+See `references/EXAMPLES.md` for EBCDIC identifier detection, explicit decode example, codec variants, and mixed-record patterns.
 
 ---
 
 ## File I/O Handling
 
 ### Binary Files
-
-```python
-# Py2 (implicit):
-with open('data.bin') as f:
-    data = f.read()  # bytes in Py2
-
-# Py3 (explicit — our fix):
-with open('data.bin', 'rb') as f:
-    data = f.read()  # bytes ✓
-```
+- Python 2: `open(file)` implicitly reads bytes
+- Python 3: Must explicitly specify `'rb'` mode for bytes
 
 ### Text Files
-
-```python
-# Py2 (implicit UTF-8/system default):
-with open('config.txt') as f:
-    lines = f.readlines()  # bytes in Py2, but often treated as str
-
-# Py3 (explicit):
-with open('config.txt', encoding='utf-8') as f:
-    lines = f.readlines()  # str ✓
-```
+- Python 2: `open(file)` reads bytes, treats as str implicitly
+- Python 3: Must explicitly specify `encoding='utf-8'` for str
 
 ### Legacy Non-UTF-8 Codecs
+- Latin-1 files: `encoding='latin-1'`
+- EBCDIC files: Read as bytes ('rb'), then decode with specific codec (cp500, cp037, etc.)
 
-```python
-# Latin-1 file (e.g., Windows-1252 legacy data):
-with open('legacy_export.csv', encoding='latin-1') as f:
-    data = f.read()  # str, decoded with latin-1
-
-# EBCDIC file:
-with open('mainframe_data.dat', 'rb') as f:
-    raw = f.read()  # bytes
-data = raw.decode('cp500')  # str, EBCDIC decoded
-```
+See `references/EXAMPLES.md` for file I/O handling examples: binary files, text files with encoding, and legacy non-UTF-8 codecs.
 
 ---
 
 ## Integration with Migration State Tracker
 
-Record every bytes/str decision in migration-state.json:
+Record every bytes/str decision in migration-state.json including:
+- Module name, phase, bytes_str_status
+- Count of decisions made and pending
+- Overall risk level for the module
+- Notes on key decisions and pending items
 
-```json
-{
-  "modules": {
-    "scada/modbus.py": {
-      "phase": "3-semantic",
-      "bytes_str_status": "in_progress",
-      "decisions_made": 12,
-      "decisions_pending": 3,
-      "risk_level": "high",
-      "notes": [
-        "Modbus frames kept as bytes through parsing layer",
-        "Display functions explicitly decode to str",
-        "Pending: CRC function needs endianness verification"
-      ]
-    }
-  }
-}
-```
+See `references/EXAMPLES.md` for migration state tracking example.
 
 ---
 
