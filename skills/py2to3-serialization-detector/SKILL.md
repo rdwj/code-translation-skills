@@ -286,6 +286,10 @@ The skill has succeeded when:
 
 ---
 
+## Model Tier
+
+**Haiku (80%) + Sonnet (20%).** Detecting pickle/marshal/struct/json/yaml usage is pattern matching — use Haiku. Assessing cross-version compatibility for complex serialization (custom pickle reducers, struct format strings mixing text and binary) benefits from Sonnet.
+
 ## References
 
 - `references/serialization-migration.md` — Comprehensive pickle/marshal/shelve Py2→Py3 migration guide covering protocol version matrix, marshal dangers, shelve backend compatibility, custom `__getstate__`/`__setstate__` auditing, and struct packing patterns

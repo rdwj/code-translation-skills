@@ -230,6 +230,12 @@ python3 ../py2to3-migration-state-tracker/scripts/update_state.py \
     --output-path <output_dir>/data-layer-report.json
 ```
 
+## Model Tier
+
+**Sonnet** (with Haiku pre-processing). Understanding binary protocol semantics, encoding decisions, and data flow across serialization boundaries requires domain knowledge beyond pattern matching.
+
+Decomposition: Haiku inventories all data layer code — files with struct.pack/unpack, encoding declarations, protocol handlers, serialization calls. Sonnet analyzes the semantics of each data pathway. This limits Sonnet to the data layer subset rather than the entire codebase.
+
 ## References
 
 This skill uses shared reference documents. Read them for detection guidance:

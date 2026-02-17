@@ -412,6 +412,10 @@ The skill has succeeded when:
 
 ---
 
+## Model Tier
+
+**Haiku (70%) + Sonnet (30%).** Generating rollback procedures from dependency graph reversal is algorithmic — use Haiku. Feasibility assessment for complex rollback scenarios (partially migrated clusters, data format changes) benefits from Sonnet reasoning.
+
 ## References
 
 - `references/migration-phases.md` — Detailed description of each migration phase

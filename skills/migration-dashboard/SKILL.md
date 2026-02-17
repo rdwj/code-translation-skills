@@ -433,6 +433,10 @@ toward production readiness.**
 The dashboard is updated after every phase advancement and distributed to all stakeholders.
 It's the single source of truth for "where are we?"
 
+## Model Tier
+
+**Haiku.** Dashboard generation reads pre-computed JSON files and produces HTML. Pure template rendering with data binding. No LLM reasoning required. Always use Haiku.
+
 ## References
 
 - `ARCHITECTURE-migration-dashboard.md` — Detailed rendering pipeline and performance tuning

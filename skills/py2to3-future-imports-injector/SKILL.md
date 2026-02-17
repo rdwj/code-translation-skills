@@ -197,6 +197,10 @@ This makes debugging much easier.
 to be skipped or the file may need `b''` prefixes added to byte string literals. The
 cautious mode handles this by treating `unicode_literals` separately.
 
+## Model Tier
+
+**Haiku.** Injecting `__future__` imports is mechanical AST manipulation — find the insertion point, add the import line. No reasoning about code semantics. Always use Haiku.
+
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

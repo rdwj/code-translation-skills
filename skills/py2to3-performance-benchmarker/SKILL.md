@@ -211,6 +211,13 @@ The Gate Checker reads `performance-report.json` and checks the
 - **bytes-str-patterns.md**: Encoding operations that may add overhead
 
 ---
+
+## Model Tier
+
+**Haiku.** Performance benchmarking executes timing tests and computes statistical comparisons. Numerical analysis, no code reasoning. Always use Haiku.
+
+## References
+
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ## Success Criteria

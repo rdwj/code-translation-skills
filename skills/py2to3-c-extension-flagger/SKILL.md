@@ -252,6 +252,10 @@ The skill has succeeded when:
 
 ---
 
+## Model Tier
+
+**Haiku.** C extension detection is pattern matching in build files and import statements — scanning for .so/.pyd references, ctypes/CFFI calls, and deprecated C API names. Always use Haiku.
+
 ## References
 
 - `references/c-api-removed-by-version.md` — Authoritative list of removed C API per version

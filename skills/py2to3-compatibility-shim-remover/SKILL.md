@@ -259,6 +259,10 @@ See `references/EXAMPLES.md` for special case examples: type hints, deprecated m
 
 ---
 
+## Model Tier
+
+**Haiku (70%) + Sonnet (30%).** Removing simple shims (six.moves, `from __future__` imports, `if PY2:` blocks) is mechanical — use Haiku. Removing custom compat modules with complex interdependencies requires Sonnet to analyze what code depends on the shim's behavior.
+
 ## References
 
 - `references/six-to-py3-equivalents.md` — Complete mapping of six functions to Py3

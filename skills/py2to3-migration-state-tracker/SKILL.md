@@ -376,6 +376,10 @@ Every decision about how to handle an encoding, which library to replace with wh
 why a particular bytes/str boundary was resolved a certain way needs to be recorded. Future
 maintainers will thank us.
 
+## Model Tier
+
+**Haiku.** This skill performs JSON state management — reads, writes, and queries against migration-state.json. No LLM reasoning required. Always delegate to Haiku when using sub-agents.
+
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

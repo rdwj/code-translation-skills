@@ -140,6 +140,12 @@ This skill modifies source files in-place (or to --output directory):
 - **Test coverage**: Recommend running tests after each skill to validate transformations.
 
 
+## Model Tier
+
+**Sonnet** (with Haiku pre-processing). Resolving metaclass transformations, `__cmp__` to rich comparison methods, and iterator semantic changes requires understanding what the code intends, not just what it looks like.
+
+Decomposition: Haiku identifies all dynamic patterns (metaclass usage, __cmp__, map/filter/zip consumption patterns). Sonnet receives each pattern with its call context and determines the correct transformation. One Sonnet call per pattern, not per file.
+
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

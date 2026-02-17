@@ -263,6 +263,13 @@ criterion for Phase 4→5 advancement:
 - **hypothesis-strategies.md**: Property-based test strategies for randomized inputs
 
 ---
+
+## Model Tier
+
+**Haiku.** Encoding stress testing generates test vectors from templates and executes them. Test infrastructure work, no semantic reasoning about the code under test. Always use Haiku.
+
+## References
+
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
 
 ## Success Criteria

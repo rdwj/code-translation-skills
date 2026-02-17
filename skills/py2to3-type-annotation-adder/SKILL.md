@@ -82,6 +82,12 @@ This skill performs AST-based type inference on converted Python code to add com
 
 10. **Generate py.typed marker** (PEP 561) in package root
 
+## Model Tier
+
+**Sonnet** (with Haiku pre-processing). Type inference for non-trivial cases requires control flow analysis and understanding of Python's type system.
+
+Decomposition: Haiku adds obvious annotations — types stated in docstrings, single-expression return functions, parameters with default values that reveal their type. Sonnet handles the rest: generic types, union types, complex return paths, callback signatures. This typically means Haiku covers 40–60% of annotations, Sonnet handles the remainder.
+
 ## References
 
 - [PEP 484: Type hints](https://www.python.org/dev/peps/pep-0484/)

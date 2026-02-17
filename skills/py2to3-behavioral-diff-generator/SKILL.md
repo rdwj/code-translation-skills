@@ -311,6 +311,12 @@ The Gate Checker (Skill X.3) reads `behavioral-diff-report.json` and checks the
 
 ---
 
+## Model Tier
+
+**Sonnet** (with Haiku pre-processing). Running tests and collecting output is mechanical. Interpreting why outputs differ and classifying diffs as expected vs. potential bugs requires semantic reasoning.
+
+Decomposition: Haiku runs the test suite under both Python 2 and Python 3, collects all outputs, and flags any differences. Sonnet receives only the diffs (not the full output) and classifies each as: expected (documented Py2/Py3 difference), potential bug (unexpected behavioral change), or false positive (formatting/ordering difference). This keeps Sonnet focused on classification, not execution.
+
 ## References
 
 - **py2-py3-syntax-changes.md**: Syntax changes that cause expected repr diffs

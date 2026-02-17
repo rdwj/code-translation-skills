@@ -451,6 +451,12 @@ This skill's outputs now feed into an expanded ecosystem:
 | modernization-advisor | (via contracts) | Suggests idiomatic target-language alternatives |
 | migration-dashboard | dependency-graph.json, migration-state.json | Visual progress tracking |
 
+## Model Tier
+
+**Haiku (90%) + Sonnet (10%).** File scanning, pattern detection, and dependency graph assembly are mechanical — use Haiku. The executive summary narrative and risk assessment in the migration report benefit from Sonnet's reasoning, but this is a small fraction of the work. For Express workflow (small projects), the entire analysis runs on Haiku.
+
+When decomposing as sub-agents: spawn Haiku sub-agents for per-file scanning, aggregate results, then use Sonnet for the final report synthesis only if the project is Standard or Full workflow.
+
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

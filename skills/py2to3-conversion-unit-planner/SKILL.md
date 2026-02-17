@@ -231,6 +231,10 @@ high risk is the single most important thing to get right. Budget extra time for
 worked on simultaneously, but in practice this depends on how many people are available
 and how familiar they are with the code.
 
+## Model Tier
+
+**Haiku (80%) + Sonnet (20%).** Dependency graph analysis, SCC detection, and unit formation are algorithmic — use Haiku. Risk-based ordering of conversion waves and strategy decisions benefit from Sonnet for large codebases. For Standard/Express workflows, Haiku handles the entire planning process.
+
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

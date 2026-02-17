@@ -319,6 +319,10 @@ from the latest Python 3 version to keep CI times reasonable.
 **Pre-existing CI configs are not overwritten.** The script generates files in the output
 directory. Review and apply them manually to avoid losing custom CI settings.
 
+## Model Tier
+
+**Haiku.** CI configuration generation is template-based. Detecting the CI system and generating dual-interpreter matrices requires no semantic reasoning. Always use Haiku.
+
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution

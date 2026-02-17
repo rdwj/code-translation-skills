@@ -172,6 +172,10 @@ See `references/EXAMPLES.md` for complete JSON structure with all fields populat
 
 ## Model Tier
 
+**Haiku (50%) + Sonnet (50%).** Simple library modernization (six→removal, old-style classes→new-style) is pattern matching — use Haiku. Architectural modernization suggestions (refactoring to context managers, replacing custom implementations with stdlib, async opportunities) require Sonnet.
+
+## Old Model Tier Documentation
+
 **Sonnet.** This skill requires deep reasoning about target-language idioms, ecosystem knowledge, and capability
 matching. Haiku cannot reliably infer idiomatic patterns or assess risk. Each opportunity is independent,
 keeping context bounded.

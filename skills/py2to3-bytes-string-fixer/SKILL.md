@@ -241,6 +241,12 @@ See `references/EXAMPLES.md` for migration state tracking example.
 
 ---
 
+## Model Tier
+
+**Sonnet** (with Haiku pre-processing). The core task — deciding whether a variable holds bytes or text and choosing the correct fix — requires semantic understanding of data flow. Haiku cannot reliably make these decisions.
+
+Decomposition: Haiku identifies all byte/str boundary locations (calls to encode/decode, socket.recv, file I/O without encoding, struct.pack). Sonnet receives only these locations with surrounding context and decides the fix strategy. This reduces Sonnet's token consumption by ~70% compared to feeding it entire files.
+
 ## References
 
 - **encoding-patterns.md**: EBCDIC codecs, mixed encoding detection

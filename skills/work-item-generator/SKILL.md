@@ -557,6 +557,10 @@ Sonnet instead. The percentages (70/25/5) are starting points, not gospel.
 fails its test, the agent can roll back and re-route to Sonnet without losing other fixes.
 This creates a safe testing loop for routing rules.
 
+## Model Tier
+
+**Haiku.** Work item generation classifies patterns against known category lists and assigns model tiers. The classification rules are deterministic. For edge cases where pattern categorization is ambiguous, flag for human review rather than escalating to Sonnet.
+
 ## References
 
 - `ARCHITECTURE-universal-code-graph.md` — Dependency graph structure and call graphs
