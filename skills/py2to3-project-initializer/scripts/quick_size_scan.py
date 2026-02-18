@@ -16,6 +16,9 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # Complexity escalators — patterns that bump a project up one tier
 COMPLEXITY_ESCALATORS = {
@@ -324,6 +327,7 @@ def detect_non_python_languages(all_files, project_root):
     return languages
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Quick project sizing scan for migration workflow selection"

@@ -49,6 +49,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # ── Utility Functions ────────────────────────────────────────────────────────
 
@@ -723,6 +726,7 @@ def generate_report(
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Performance benchmarker — compare Py2 vs Py3 execution speed"

@@ -26,6 +26,9 @@ import argparse
 from pathlib import Path
 from collections import defaultdict, Counter
 from typing import Dict, List, Any, Optional, Tuple, Set
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 # ── Pattern Definitions ──────────────────────────────────────────────────────
@@ -903,6 +906,7 @@ def compute_summary(all_results: List[Dict]) -> Dict[str, Any]:
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Analyze a Python 2 codebase for migration readiness"

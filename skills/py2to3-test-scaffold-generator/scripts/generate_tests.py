@@ -31,6 +31,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # AST Analysis
@@ -676,6 +679,7 @@ def generate_property_tests(
 # Main
 # ═══════════════════════════════════════════════════════════════════════════
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Generate test scaffolds for Python 2→3 migration."

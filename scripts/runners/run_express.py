@@ -17,14 +17,24 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
+# ── Logging ──────────────────────────────────────────────────────────────────
+import sys as _sys; _sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1] / 'lib'))
+from migration_logger import setup_logging, log_execution, log_invocation
+logger = setup_logging(__name__)
+
 RUNNERS_DIR = Path(__file__).resolve().parent
 
 
 def run_phase_script(phase_script, args):
     """Run a phase runner script and return results."""
     cmd = [sys.executable, str(phase_script)] + args
+    logger.info(f"Invoking phase script: {phase_script.name}")
+    start_time = __import__('time').monotonic()
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        duration = __import__('time').monotonic() - start_time
+        log_invocation(phase_script, args, result.returncode, duration,
+                      len(result.stdout.encode()), len(result.stderr.encode()))
         try:
             output = json.loads(result.stdout)
             return {"status": result.returncode, "output": output, "stderr": result.stderr}
@@ -35,8 +45,10 @@ def run_phase_script(phase_script, args):
                 "stderr": result.stderr,
             }
     except subprocess.TimeoutExpired:
+        logger.error("Phase script execution timed out")
         return {"status": 2, "output": "Timeout", "stderr": "Phase execution timed out"}
     except Exception as e:
+        logger.error(f"Phase script execution error: {e}")
         return {"status": 2, "output": None, "stderr": str(e)}
 
 
@@ -279,6 +291,7 @@ def generate_remaining_issues(output_dir, phase_outputs):
     return md
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Express Workflow - Fast-track Python 2→3 migration for small/medium projects"

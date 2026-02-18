@@ -474,6 +474,89 @@ parent-dir/
 - Easy rollback: delete workspace and start over
 - Multiple migration attempts can coexist
 
+## Round 7: Security Scanner + SBOM (2026-02-18)
+
+Motivated by the need to ensure migration output is secure and auditable. Py2→3 migrations introduce security risk: dependency upgrades can pull vulnerable versions, mechanical transformations can introduce anti-patterns, and pickle protocol changes widen deserialization surfaces.
+
+### Changes Made
+
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| R7-1 | Created py2to3-security-scanner skill | COMPLETE | New skill with SKILL.md — covers SBOM, vuln scanning, static analysis, secrets, migration-specific checks |
+| R7-2 | Created security_scan.py (935 lines) | COMPLETE | CycloneDX SBOM generation, pip-audit/OSV vuln scanning, Bandit/regex static analysis, secret detection, migration-specific checks, delta comparison |
+| R7-3 | Wired into Full workflow TODO template | COMPLETE | Phase 0 (baseline), Phase 2 (regression), Phase 5 (final audit) |
+| R7-4 | Wired into Standard workflow TODO template | COMPLETE | Phase 1 (baseline), Phase 3 (final audit) |
+| R7-5 | Wired into phase runner scripts | COMPLETE | phase0_discovery.py, phase2_mechanical.py, phase5_cutover.py all invoke security_scan.py |
+| R7-6 | Added security gate criteria | COMPLETE | Phase 0→1: baseline recorded. Phase 2→3: no new critical/high. Phase 5 Done: audit complete + SBOM |
+
+### Key Design Decisions
+
+- **Woven, not a separate phase.** Security scanning runs at three points in the existing phase structure: discovery (baseline), post-mechanical (regression delta), and pre-cutover (final audit + SBOM deliverable).
+- **SBOM is a first-class output.** CycloneDX 1.5 JSON format. Generated at baseline and updated at final. The final SBOM is the deliverable for security review.
+- **Script does all scanning, LLM reviews flags.** The 935-line script handles Bandit, pip-audit, OSV API, secret detection, and migration-specific patterns. Low-confidence findings go to `flagged-for-review.json` for Sonnet triage.
+- **Graceful degradation.** If Bandit isn't installed, falls back to regex. If pip-audit isn't installed, calls OSV API directly. If offline, skips vuln DB with warning. The scan always produces output.
+- **Delta comparison is the key metric.** The regression and final scans compare against the baseline to answer "did the migration make security worse?" Pre-existing findings are noted but don't block.
+- **Migration-specific checks.** Beyond generic SAST, the scanner checks for Py2→3 specific risks: `input()` eval injection, pickle protocol changes, `exec(open())` patterns, hash randomization, SSL default changes.
+
+### Scan Components
+
+| Component | Tool | Fallback |
+|-----------|------|----------|
+| SBOM generation | Custom parser (requirements, setup.py, pyproject.toml, Pipfile, vendored) | Always works |
+| Vulnerability scan | `pip-audit` subprocess | OSV API → offline skip |
+| Static analysis | `bandit -f json` subprocess | 13-pattern regex scan |
+| Secret detection | Custom regex (AWS, GitHub, Slack, PEM, passwords, conn strings) | Always works |
+| Migration-specific | Custom checks (6 patterns) | Always works |
+| Dependency pinning | Custom parser | Always works |
+
+## Round 7.5: Script Logging (2026-02-18)
+
+Added observability to all 73 scripts so post-migration analysis can verify whether the LLM agent actually used our scripts.
+
+### Changes Made
+
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| R7.5-1 | Created `scripts/lib/migration_logger.py` | COMPLETE | Shared logging module (~246 lines): `setup_logging()`, `@log_execution` decorator, `log_invocation()` for JSONL |
+| R7.5-2 | Created `scripts/lib/__init__.py` | COMPLETE | Package marker |
+| R7.5-3 | Added logging to 7 phase runner scripts | COMPLETE | Import block + `@log_execution` + `log_invocation()` in `run_script()` |
+| R7.5-4 | Updated 8 existing-logging scripts | COMPLETE | Replaced `logging.basicConfig` with shared `setup_logging()` |
+| R7.5-5 | Added logging to 58 non-logging scripts | COMPLETE | 3-line import block + `@log_execution` decorator |
+| R7.5-6 | Added `logs/` to init directory structure | COMPLETE | `create_directory_structure()` in init_migration_project.py |
+
+### Log Outputs
+
+- `migration-analysis/logs/migration-audit.log` — chronological text log (all scripts write START/END entries)
+- `migration-analysis/logs/skill-invocations.jsonl` — structured JSONL from phase runners (script, skill, args, exit_code, duration_s, stdout/stderr bytes)
+
+## Round 8: Skill Usage Dashboard (2026-02-18)
+
+Post-migration dashboard answering "Which skills ran? Which were skipped? Is the agent using our scripts?"
+
+### Changes Made
+
+| # | What | Status | Notes |
+|---|------|--------|-------|
+| R8-1 | Created `generate_skill_usage_dashboard.py` | COMPLETE | ~650 lines: parses audit.log + JSONL, builds inventory, categorizes skips, generates self-contained HTML |
+| R8-2 | Updated migration-dashboard SKILL.md | COMPLETE | Added Skill Usage Dashboard section with docs, usage, data sources |
+| R8-3 | Updated SKILL-UPDATE-PLAN.md | COMPLETE | Rounds 7.5 and 8 |
+
+### Dashboard Features
+
+- **Summary cards**: script coverage, skill coverage, failures, total runtime
+- **Skill coverage table**: sortable, filterable by status (Complete / Partial / Expected Skip / Potential Gap)
+- **Execution time chart**: canvas bar chart of top-20 slowest scripts
+- **Failure summary**: scripts with exit_code != 0
+- **All invocations table**: every execution record, sortable
+- **Skip analysis**: expected skips (project too small, no C extensions, etc.) vs potential gaps
+
+### Key Design Decisions
+
+- **Dual-source parsing**: reads both `migration-audit.log` (from @log_execution on all 66 scripts) and `skill-invocations.jsonl` (from phase runner log_invocation()). Deduplicates by script+timestamp.
+- **Dynamic inventory discovery**: walks `skills/*/scripts/*.py` at runtime with hardcoded fallback manifest of all 35 skills / 66 scripts.
+- **Skip categorization**: uses project sizing, workflow type, and scan results to distinguish "expected skip" from "potential gap".
+- **Self-contained HTML**: dark theme, embedded JSON, client-side sorting/filtering, canvas charts — same pattern as migration progress dashboard.
+
 ## Next Steps (Remaining Work)
 
 ### P2: Additional Tree-sitter Queries

@@ -19,6 +19,9 @@ from datetime import datetime
 from collections import defaultdict
 from typing import Dict, List, Any
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # ── Helper Functions ─────────────────────────────────────────────────────────
 
@@ -387,6 +390,7 @@ def generate_report(report_data: Dict, data_migration: Dict) -> str:
 
 # ── Main Entry Point ────────────────────────────────────────────────────────
 
+@log_execution
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(

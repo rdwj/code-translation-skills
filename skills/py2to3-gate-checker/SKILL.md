@@ -50,6 +50,7 @@ from real migrations.
 | `report_reviewed` | Migration report has been marked as reviewed | Boolean flag in state |
 | `target_version_selected` | Target Python version is set in project config | Non-empty string |
 | `data_layer_analyzed` | Data Format Analyzer has run | data-layer-report.json exists |
+| `security_baseline_recorded` | Security scanner has run in baseline mode | security-report.json + sbom.json exist |
 
 ### Phase 1 → 2 (Foundation → Mechanical Conversion)
 
@@ -70,6 +71,7 @@ from real migrations.
 | `tests_pass_py3` | Tests pass under Python 3 | ≥ 90% pass rate (configurable) |
 | `no_lint_regressions` | Lint score at or above baseline | No regressions |
 | `conversion_reviewed` | Conversion diff has been reviewed | Review flag set |
+| `no_new_security_critical` | Security regression scan shows no new critical/high findings | Zero new critical/high vs baseline |
 
 ### Phase 3 → 4 (Semantic Fixes → Verification)
 
@@ -100,6 +102,7 @@ from real migrations.
 | `soak_period_complete` | Production has run on Py3 for soak period | ≥ N days (configurable) |
 | `no_rollback_incidents` | No rollback-triggering incidents during soak | Zero incidents |
 | `shims_removed` | Compatibility shims have been removed | Boolean |
+| `security_audit_complete` | Final security scan passed, SBOM generated | sbom.json exists, no unacknowledged critical findings |
 
 ## Inputs
 

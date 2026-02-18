@@ -20,6 +20,9 @@ import argparse
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List, Optional
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 def load_json(path: Optional[str]) -> Optional[Dict[str, Any]]:
@@ -816,6 +819,7 @@ def generate_html(
     return html, sections_rendered
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description='Generate a self-contained HTML migration dashboard'

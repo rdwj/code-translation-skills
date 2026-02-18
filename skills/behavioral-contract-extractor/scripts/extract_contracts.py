@@ -23,7 +23,6 @@ Usage:
 import argparse
 import ast
 import json
-import logging
 import os
 import re
 import sys
@@ -32,12 +31,9 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(levelname)s: %(message)s",
-)
-logger = logging.getLogger(__name__)
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 @dataclass
@@ -744,6 +740,7 @@ class ContractExtractor:
         return min(score, 0.95)
 
 
+@log_execution
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(

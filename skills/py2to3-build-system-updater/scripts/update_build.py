@@ -22,6 +22,9 @@ from typing import Dict, List, Tuple, Any, Optional
 import ast
 from datetime import datetime
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # ── JSON Helpers ──
 def load_json(filepath: str) -> Dict[str, Any]:
@@ -365,6 +368,7 @@ def analyze_requirements(filepath: str) -> List[Dict[str, str]]:
 
 
 # ── Main Orchestration ──
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description='Update build infrastructure for Python 3 compatibility',
@@ -513,7 +517,3 @@ def main():
     print(f"Updates: {report['summary']['files_updated']}", file=sys.stderr)
 
     return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main())

@@ -13,13 +13,10 @@ import json
 import argparse
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-import logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s: %(message)s'
-)
-logger = logging.getLogger(__name__)
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # Global parser cache to avoid reloading grammars
 _parser_cache: Dict[str, Any] = {}
@@ -186,6 +183,7 @@ def parse_file(filepath: str, language: str) -> Dict[str, Any]:
     return result
 
 
+@log_execution
 def main():
     """CLI entry point for testing."""
     parser = argparse.ArgumentParser(

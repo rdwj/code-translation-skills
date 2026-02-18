@@ -32,6 +32,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -627,6 +630,7 @@ def generate_lint_rules(
 # main()
 # ──────────────────────────────────────────────────────────────────────────────
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Generate custom lint rules and configurations for migration phases"

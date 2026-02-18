@@ -433,6 +433,52 @@ toward production readiness.**
 The dashboard is updated after every phase advancement and distributed to all stakeholders.
 It's the single source of truth for "where are we?"
 
+## Skill Usage Dashboard
+
+A companion dashboard for post-migration analysis of tool effectiveness. Answers: "Did the agent actually use our scripts? Which skills were skipped and why?"
+
+### When to Use
+
+Run after a migration completes (or at any checkpoint) to audit skill utilization. Useful for:
+- Verifying the LLM agent called the intended scripts
+- Identifying skills that were skipped (expected or not)
+- Finding failures that may have gone unnoticed
+- Measuring execution time per skill for performance tuning
+- Reporting skill coverage metrics to stakeholders
+
+### What It Shows
+
+1. **Summary cards** — script coverage (X/66), skill coverage (Y/35), failure count, total runtime
+2. **Skill coverage table** — per-skill status: Complete, Partial, Expected Skip, Potential Gap
+3. **Execution time chart** — horizontal bar chart of slowest scripts
+4. **Failure summary** — scripts with exit_code != 0
+5. **All invocations table** — sortable/filterable list of every script execution
+6. **Skip analysis** — categorizes unused skills as "expected" (project too small, no C extensions, etc.) vs "potential gap" (should have run but didn't)
+
+### Data Sources
+
+Reads from `migration-analysis/logs/`:
+- `migration-audit.log` — text log from `@log_execution` decorator on every script
+- `skill-invocations.jsonl` — structured JSONL from phase runner `log_invocation()` calls
+
+Also reads `migration-state.json` for project sizing/workflow context used in skip analysis.
+
+### Usage
+
+```bash
+python3 generate_skill_usage_dashboard.py <analysis_dir> \
+    [--output skill-usage-dashboard.html] \
+    [--skills-root /path/to/code-translation-skills] \
+    [--project-name "My Project"]
+```
+
+Output: self-contained HTML file (same pattern as migration progress dashboard — dark theme, no external dependencies, works offline).
+
+### Invocation Points
+
+- **Phase 5 (cutover)**: Generate as part of final deliverables alongside SBOM and migration report
+- **Ad hoc**: Run at any time during migration to check tool utilization so far
+
 ## Model Tier
 
 **Haiku.** Dashboard generation reads pre-computed JSON files and produces HTML. Pure template rendering with data binding. No LLM reasoning required. Always use Haiku.

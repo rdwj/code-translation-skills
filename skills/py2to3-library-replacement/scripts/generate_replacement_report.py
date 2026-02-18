@@ -25,6 +25,9 @@ from datetime import datetime
 from typing import Dict, List, Any
 from collections import defaultdict
 import argparse
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 def load_json(path: str) -> Dict:
@@ -341,6 +344,7 @@ def generate_report(replacements_file: str, no_replacement_file: str) -> str:
     return "\n".join(lines)
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Generate a human-readable report from library replacements JSON"

@@ -14,18 +14,29 @@ import subprocess
 import sys
 from pathlib import Path
 
+# ── Logging ──────────────────────────────────────────────────────────────────
+import sys as _sys; _sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1] / 'lib'))
+from migration_logger import setup_logging, log_execution, log_invocation
+logger = setup_logging(__name__)
+
 SKILLS_DIR = Path(__file__).resolve().parent.parent.parent / "skills"
 
 
 def run_script(script_path, args, description):
     """Run a script, capture output, handle errors."""
     if not script_path.exists():
+        logger.warning(f"Script not found, skipping: {script_path}")
         return {"status": "skipped", "reason": f"Script not found: {script_path}"}
 
     cmd = [sys.executable, str(script_path)] + args
     print(f"  → {description}...", file=sys.stderr)
+    logger.info(f"Invoking: {description} ({script_path.name})")
+    start_time = __import__('time').monotonic()
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        duration = __import__('time').monotonic() - start_time
+        log_invocation(script_path, args, result.returncode, duration,
+                      len(result.stdout.encode()), len(result.stderr.encode()))
         if result.returncode == 0:
             try:
                 return {"status": "complete", "output": json.loads(result.stdout)}
@@ -39,8 +50,10 @@ def run_script(script_path, args, description):
         else:
             return {"status": "error", "stderr": result.stderr[:500]}
     except subprocess.TimeoutExpired:
+        logger.error("Script execution timed out")
         return {"status": "timeout"}
     except Exception as e:
+        logger.error(f"Script execution error: {e}")
         return {"status": "error", "error": str(e)}
 
 
@@ -133,6 +146,19 @@ def phase2_mechanical(project_root, raw_scan_path, output_dir):
         if "haiku_count" in work_data:
             summary["haiku_tier_items"] = work_data["haiku_count"]
 
+    # Step 4: Security regression scan
+    security_dir = output_dir / "security"
+    security_dir.mkdir(parents=True, exist_ok=True)
+    script_path = SKILLS_DIR / "py2to3-security-scanner" / "scripts" / "security_scan.py"
+    # Look for baseline report in phase-0 output
+    baseline_report = output_dir.parent / "phase-0-discovery" / "security" / "security-report.json"
+    security_args = [str(project_root), "--mode", "regression", "-o", str(security_dir)]
+    if baseline_report.exists():
+        security_args += ["--baseline-report", str(baseline_report)]
+    security = run_script(script_path, security_args, "Security regression scan")
+    results["security"] = security
+    summary["security_scan"] = security.get("status", "unknown")
+
     with open(output_dir / "mechanical-summary.json", "w") as f:
         json.dump(summary, f, indent=2)
 
@@ -143,6 +169,7 @@ def phase2_mechanical(project_root, raw_scan_path, output_dir):
     if haiku_errors > 0:
         print(f"  Haiku fix errors: {haiku_errors}", file=sys.stderr)
     print(f"  Library replacement: {lib_replacement['status']}", file=sys.stderr)
+    print(f"  Security regression: {security['status']}", file=sys.stderr)
 
     if "total_work_items" in summary:
         print(f"  Total work items: {summary['total_work_items']}", file=sys.stderr)
@@ -171,6 +198,7 @@ def phase2_mechanical(project_root, raw_scan_path, output_dir):
     return overall_status
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Phase 2: Mechanical - Apply automated fixes to codebase"

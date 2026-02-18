@@ -47,6 +47,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
+
 # ── Type Definitions ────────────────────────────────────────────────────────
 
 DiffCategory = str  # 'expected', 'potential_bug', 'unclassified'
@@ -741,6 +745,7 @@ def generate_report(
 # ── Main ────────────────────────────────────────────────────────────────────
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Behavioral Diff Generator for Python 2→3 migration verification"

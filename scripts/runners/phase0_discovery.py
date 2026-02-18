@@ -14,18 +14,29 @@ import subprocess
 import sys
 from pathlib import Path
 
+# ── Logging ──────────────────────────────────────────────────────────────────
+import sys as _sys; _sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1] / 'lib'))
+from migration_logger import setup_logging, log_execution, log_invocation
+logger = setup_logging(__name__)
+
 SKILLS_DIR = Path(__file__).resolve().parent.parent.parent / "skills"
 
 
 def run_script(script_path, args, description):
     """Run a script, capture output, handle errors."""
     if not script_path.exists():
+        logger.warning(f"Script not found, skipping: {script_path}")
         return {"status": "skipped", "reason": f"Script not found: {script_path}"}
 
     cmd = [sys.executable, str(script_path)] + args
     print(f"  → {description}...", file=sys.stderr)
+    logger.info(f"Invoking: {description} ({script_path.name})")
+    start_time = __import__('time').monotonic()
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        duration = __import__('time').monotonic() - start_time
+        log_invocation(script_path, args, result.returncode, duration,
+                      len(result.stdout.encode()), len(result.stderr.encode()))
         if result.returncode == 0:
             try:
                 return {"status": "complete", "output": json.loads(result.stdout)}
@@ -39,8 +50,10 @@ def run_script(script_path, args, description):
         else:
             return {"status": "error", "stderr": result.stderr[:500]}
     except subprocess.TimeoutExpired:
+        logger.error("Script execution timed out")
         return {"status": "timeout"}
     except Exception as e:
+        logger.error(f"Script execution error: {e}")
         return {"status": "error", "error": str(e)}
 
 
@@ -87,6 +100,17 @@ def phase0_discovery(project_root, output_dir):
             with open(output_dir / "raw-scan.json", "w") as f:
                 json.dump(patterns_output, f, indent=2)
 
+    # Step 4: Baseline security scan + SBOM
+    security_dir = output_dir / "security"
+    security_dir.mkdir(parents=True, exist_ok=True)
+    script_path = SKILLS_DIR / "py2to3-security-scanner" / "scripts" / "security_scan.py"
+    security = run_script(
+        script_path,
+        [str(project_root), "--mode", "baseline", "-o", str(security_dir)],
+        "Baseline security scan + SBOM"
+    )
+    results["security"] = security
+
     # Generate discovery summary
     summary = {
         "phase": "discovery",
@@ -96,6 +120,7 @@ def phase0_discovery(project_root, output_dir):
             "sizing": sizing.get("status", "unknown"),
             "codebase_graph": graph.get("status", "unknown"),
             "py2_patterns": patterns.get("status", "unknown"),
+            "security_scan": security.get("status", "unknown"),
         },
     }
 
@@ -123,8 +148,10 @@ def phase0_discovery(project_root, output_dir):
     if "python_files" in summary:
         print(f"  Python files found: {summary['python_files']}", file=sys.stderr)
 
+    print(f"  Security scan: {security['status']}", file=sys.stderr)
+
     # Determine overall status
-    statuses = [sizing["status"], graph["status"], patterns["status"]]
+    statuses = [sizing["status"], graph["status"], patterns["status"], security["status"]]
     if all(s in ["complete", "partial"] for s in statuses):
         overall_status = 0
     elif any(s == "error" for s in statuses):
@@ -140,6 +167,7 @@ def phase0_discovery(project_root, output_dir):
     return overall_status
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Phase 0: Discovery - Analyze project structure and identify Python 2 patterns"

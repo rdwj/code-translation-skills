@@ -40,6 +40,9 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Dict, List, Any, Optional, Tuple, Set
 from datetime import datetime
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 # ── Pattern Definitions ──────────────────────────────────────────────────────
@@ -855,6 +858,7 @@ class DynamicPatternResolver:
                 json.dump(self.manual_review, f, indent=2, default=str)
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Resolve dynamic Python 2→3 patterns in source code"

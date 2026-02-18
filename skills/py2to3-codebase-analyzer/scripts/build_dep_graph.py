@@ -23,6 +23,9 @@ import sys
 import argparse
 from collections import defaultdict, deque
 from typing import Dict, List, Set, Tuple, Any, Optional
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 def extract_module_name(filepath: str) -> str:
@@ -368,6 +371,7 @@ def generate_html_visualization(graph_data: Dict[str, Any], output_dir: str) -> 
     print(f"Wrote {html_path}")
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(description="Build dependency graph from codebase scan")
     parser.add_argument("raw_scan", help="Path to raw-scan.json from analyze.py")
@@ -449,7 +453,3 @@ def main():
         print(f"\nTop gateway modules (most depended on):")
         for gw in special["gateways"][:5]:
             print(f"  {gw['module']} ({gw['fan_in']} dependents)")
-
-
-if __name__ == "__main__":
-    main()
