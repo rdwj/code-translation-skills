@@ -16,6 +16,9 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 def load_json(path: str) -> Dict[str, Any]:
@@ -312,6 +315,7 @@ def generate_report(report_data: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Generate Markdown report from CI setup JSON"

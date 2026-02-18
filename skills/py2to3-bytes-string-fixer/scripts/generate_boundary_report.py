@@ -22,6 +22,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 def load_json(path: str) -> Dict[str, Any]:
@@ -258,6 +261,7 @@ def generate_next_steps(decisions: Dict[str, Any]) -> str:
     return section
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(description="Generate boundary report from JSON outputs")
     parser.add_argument("--fixes", required=True, help="Path to bytes-str-fixes.json")

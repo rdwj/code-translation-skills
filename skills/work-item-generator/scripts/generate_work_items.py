@@ -25,19 +25,15 @@ Exit codes:
 import argparse
 import json
 import sys
-import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, asdict
 from collections import defaultdict
 import re
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 # ============================================================================
@@ -481,6 +477,7 @@ def write_summary_json(filepath: Path, summary: Dict[str, Any]) -> None:
 # Main
 # ============================================================================
 
+@log_execution
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(

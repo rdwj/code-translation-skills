@@ -18,6 +18,9 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 RISK_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -268,6 +271,7 @@ def generate_report(
     return "\n".join(lines)
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Generate markdown data layer report from analysis outputs."

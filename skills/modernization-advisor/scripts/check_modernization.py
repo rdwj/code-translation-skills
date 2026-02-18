@@ -20,13 +20,16 @@ Outputs:
 
 import argparse
 import json
-import logging
 import re
 import sys
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # ============================================================================
 # Modernization Rules Lookup Table (Deterministic)
@@ -362,6 +365,7 @@ def write_summary_to_stdout(summary: Dict[str, Any]) -> None:
 # ============================================================================
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Scan Python code for modernization opportunities",
@@ -402,12 +406,6 @@ Examples:
     )
 
     args = parser.parse_args()
-
-    # Setup logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(levelname)s: %(message)s",
-    )
 
     # Validate inputs
     if not args.source_dir.exists():

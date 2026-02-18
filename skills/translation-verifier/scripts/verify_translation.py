@@ -26,6 +26,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import shutil
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 class TranslationVerifier:
@@ -690,6 +693,7 @@ class TranslationVerifier:
         print(json.dumps(summary, indent=2))
 
 
+@log_execution
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(

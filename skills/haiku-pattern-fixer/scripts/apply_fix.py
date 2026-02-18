@@ -24,6 +24,9 @@ import re
 import sys
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 # Define all supported pattern transformations
@@ -305,6 +308,7 @@ def generate_diff(
     return "\n".join(diff_lines)
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Apply a single mechanical Python 2→3 pattern fix"

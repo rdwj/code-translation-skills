@@ -49,6 +49,10 @@ from typing import Dict, List, Any, Optional, Set, Tuple
 from datetime import datetime
 import tempfile
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
+
 
 # ── Lib2to3 Integration ──────────────────────────────────────────────────────
 
@@ -509,6 +513,7 @@ def resolve_unit(
 # CLI
 # ═══════════════════════════════════════════════════════════════════════════
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Convert a conversion unit from Python 2 to Python 3"

@@ -45,6 +45,9 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -802,6 +805,7 @@ def _count_by_phase(results: List[Dict[str, Any]]) -> Dict[str, Dict[str, int]]:
 # CLI
 # ═══════════════════════════════════════════════════════════════════════════
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Check gate criteria for migration phase advancement."

@@ -10,18 +10,15 @@ LLM involvement: NONE
 import sys
 import json
 import argparse
-import logging
 import tempfile
 from pathlib import Path
 from typing import Dict, List, Any, Set, Optional, Tuple
 import os
 import re
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s: %(message)s'
-)
-logger = logging.getLogger(__name__)
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # Import the analysis modules
 try:
@@ -505,6 +502,7 @@ def analyze_codebase(
     return exit_code, summary
 
 
+@log_execution
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(

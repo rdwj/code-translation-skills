@@ -25,6 +25,9 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Dict, List, Any, Optional, Tuple
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # ── C API Removals by Version ────────────────────────────────────────────────
 
@@ -524,6 +527,7 @@ def analyze_codebase(codebase_path: str, target_version: str,
 
 # ── Main Entry Point ────────────────────────────────────────────────────────
 
+@log_execution
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(

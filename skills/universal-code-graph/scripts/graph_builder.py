@@ -28,13 +28,10 @@ import json
 import argparse
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Set, Tuple
-import logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s: %(message)s'
-)
-logger = logging.getLogger(__name__)
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 try:
     import networkx as nx
@@ -347,6 +344,7 @@ def build_dependency_graph(
     return graph
 
 
+@log_execution
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(

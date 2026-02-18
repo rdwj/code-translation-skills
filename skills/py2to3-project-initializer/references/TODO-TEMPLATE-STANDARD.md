@@ -13,6 +13,7 @@
 _Combines discovery, foundation, and mechanical conversion into one phase._
 
 - [ ] Run py2to3-codebase-analyzer (summary mode) → `migration-analysis/phase-1-analyze-convert/` [Haiku]
+- [ ] Run py2to3-security-scanner `--mode baseline` → `migration-analysis/phase-1-analyze-convert/security/` [Haiku] _(SBOM + baseline scan)_
 - [ ] Run py2to3-future-imports-injector (`--batch-size 20`) [Haiku]
 - [ ] Run py2to3-automated-converter (all files or by conversion unit) [Haiku]
 - [ ] Run py2to3-library-replacement (if stdlib renames detected) [Haiku]
@@ -22,7 +23,7 @@ _Combines discovery, foundation, and mechanical conversion into one phase._
 - [ ] Initialize migration state tracker (if > 50 files) [Haiku]
 - [ ] **Write Phase 2 handoff prompt** (if needed)
 
-**Gate criteria**: All files parse as Python 3. Test suite runs (may have failures from semantic issues).
+**Gate criteria**: All files parse as Python 3. Test suite runs (may have failures from semantic issues). Baseline security scan recorded.
 
 ---
 
@@ -45,9 +46,10 @@ _Combines verification and cutover into one phase._
 - [ ] Run py2to3-dead-code-detector [Haiku]
 - [ ] Run py2to3-compatibility-shim-remover (remove six, __future__ if no longer needed) [Haiku]
 - [ ] Final test suite run
+- [ ] Run py2to3-security-scanner `--mode final --baseline-report phase-1-analyze-convert/security/security-report.json` → `migration-analysis/phase-3-verify-cutover/security/` [Haiku] _(final SBOM + security audit)_
 - [ ] **Write migration completion summary**
 
-**Gate criteria**: No remaining Py2 artifacts. Full test suite green. Dead code removed.
+**Gate criteria**: No remaining Py2 artifacts. Full test suite green. Dead code removed. Final SBOM generated. No unacknowledged critical security findings.
 
 ---
 

@@ -30,6 +30,9 @@ from typing import Dict, List, Any, Optional, Set, Tuple
 from collections import defaultdict
 import yaml
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # ── Helper Functions ──────────────────────────────────────────────────────────
 
@@ -1088,6 +1091,7 @@ def plan_canary_deployment(
     return plan
 
 
+@log_execution
 def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(

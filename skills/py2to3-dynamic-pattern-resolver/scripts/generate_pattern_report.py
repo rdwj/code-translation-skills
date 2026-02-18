@@ -17,6 +17,9 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Any
 from collections import defaultdict
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 # ── Report Templates ────────────────────────────────────────────────────────
@@ -259,6 +262,7 @@ Semantic Python 2→3 pattern analysis and resolution results.
         print(f"Report written to {filepath}")
 
 
+@log_execution
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 generate_pattern_report.py <output_dir>")

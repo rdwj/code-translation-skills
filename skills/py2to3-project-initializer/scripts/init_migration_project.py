@@ -15,6 +15,9 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 def count_python_files(project_root):
     """Count .py files in the project and categorize by size."""
@@ -110,6 +113,7 @@ def create_directory_structure(project_root):
 
     subdirs = [
         "handoff-prompts",
+        "logs",
         "phase-0-discovery",
         "phase-1-foundation",
         "phase-2-mechanical",
@@ -208,6 +212,7 @@ The goal is that someone starting a fresh session with only that prompt has full
     return prompt
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Initialize a Python 2→3 migration project"
@@ -324,11 +329,12 @@ TODO_TEMPLATE = """# Python 2→3 Migration TODO
 - [ ] Run py2to3-serialization-detector → `migration-analysis/phase-0-discovery/`
 - [ ] Run py2to3-c-extension-flagger (if applicable) → `migration-analysis/phase-0-discovery/`
 - [ ] Run py2to3-lint-baseline-generator → `migration-analysis/phase-0-discovery/`
+- [ ] Run **py2to3-security-scanner** `--mode baseline` → `migration-analysis/phase-0-discovery/security/` _(SBOM + baseline vulnerability scan)_
 - [ ] Initialize migration state tracker
 - [ ] Run gate checker for Phase 0→1
 - [ ] **Write Phase 1 handoff prompt** → `migration-analysis/handoff-prompts/phase1-handoff-prompt.md`
 
-**Gate criteria**: All 5 discovery outputs exist. Risk scores assigned to all modules. Dependency graph complete.
+**Gate criteria**: All 5 discovery outputs exist. Risk scores assigned to all modules. Dependency graph complete. Baseline security scan recorded (findings noted, not blocking).
 
 ---
 
@@ -358,10 +364,11 @@ _Process one conversion unit at a time. Update state after each unit._
   - [ ] Verify: all files in unit parse as valid Python 3
   - [ ] Update migration state tracker
   - [ ] _If session is long: write a mid-phase handoff prompt_
+- [ ] Run **py2to3-security-scanner** `--mode regression --baseline-report phase-0-discovery/security/security-report.json` → `migration-analysis/phase-2-mechanical/security/` _(catch issues introduced by conversion)_
 - [ ] Run gate checker for Phase 2→3
 - [ ] **Write Phase 3 handoff prompt** → `migration-analysis/handoff-prompts/phase3-handoff-prompt.md`
 
-**Gate criteria**: All modules parse as valid Python 3. All conversion units processed. No syntax errors.
+**Gate criteria**: All modules parse as valid Python 3. All conversion units processed. No syntax errors. No new critical/high security findings vs baseline.
 
 ---
 
@@ -404,11 +411,12 @@ _This is the hardest phase. Process one conversion unit at a time, 5–10 files 
 - [ ] Run py2to3-compatibility-shim-remover (`--batch-size 5`)
 - [ ] Run py2to3-dead-code-detector
 - [ ] Final test suite run
+- [ ] Run **py2to3-security-scanner** `--mode final --baseline-report phase-0-discovery/security/security-report.json` → `migration-analysis/phase-5-cutover/security/` _(final SBOM + security audit deliverable)_
 - [ ] Update migration state tracker
 - [ ] Run final gate check
 - [ ] **Write migration completion summary**
 
-**Gate criteria**: All compatibility shims removed. Dead code cleaned. Full test suite green. Rollback plan documented.
+**Gate criteria**: All compatibility shims removed. Dead code cleaned. Full test suite green. Rollback plan documented. Final security audit: no unacknowledged critical findings, SBOM generated.
 
 ---
 

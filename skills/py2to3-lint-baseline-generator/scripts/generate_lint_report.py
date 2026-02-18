@@ -15,6 +15,9 @@ import json
 import os
 import sys
 from typing import Any, Dict, List
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 def load_baseline(path: str) -> Dict[str, Any]:
@@ -199,6 +202,7 @@ def render_report(baseline: Dict[str, Any], project_name: str = "Python 2 Codeba
     return "\n".join(lines)
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Generate a markdown report from a lint baseline."

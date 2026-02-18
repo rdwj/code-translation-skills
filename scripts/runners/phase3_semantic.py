@@ -12,6 +12,11 @@ import json
 import sys
 from pathlib import Path
 
+# ── Logging ──────────────────────────────────────────────────────────────────
+import sys as _sys; _sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[1] / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
+
 
 def phase3_semantic(work_items_path, raw_scan_path, output_dir):
     """Prepare semantic review brief."""
@@ -138,6 +143,7 @@ def phase3_semantic(work_items_path, raw_scan_path, output_dir):
     return 0
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Phase 3: Semantic - Prepare work items for LLM review (no execution, just curation)"

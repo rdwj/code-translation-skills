@@ -23,6 +23,10 @@ from typing import Dict, List, Tuple, Any, Optional, Set
 from datetime import datetime
 from collections import defaultdict
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
+
 
 # ── JSON Helpers ──
 def load_json(filepath: str) -> Dict[str, Any]:
@@ -465,6 +469,7 @@ def generate_coverage_report(analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description='Add type annotations to Python code via AST analysis'

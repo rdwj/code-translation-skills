@@ -19,6 +19,9 @@ import json
 import os
 import sys
 from typing import Any, Dict, List
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 RISK_EMOJI = {
@@ -355,6 +358,7 @@ def render_report(plan: Dict[str, Any], project_name: str = "") -> str:
 # CLI
 # ═══════════════════════════════════════════════════════════════════════════
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Generate a markdown report from a conversion plan JSON."

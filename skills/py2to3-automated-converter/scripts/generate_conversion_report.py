@@ -21,6 +21,9 @@ import sys
 from typing import Any, Dict, List
 from pathlib import Path
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 def load_report(path: str) -> Dict[str, Any]:
     """Load and validate the conversion report JSON."""
@@ -325,6 +328,7 @@ def _transform_description(transform_type: str) -> str:
 # CLI
 # ═══════════════════════════════════════════════════════════════════════════
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Generate a markdown report from a conversion report JSON."

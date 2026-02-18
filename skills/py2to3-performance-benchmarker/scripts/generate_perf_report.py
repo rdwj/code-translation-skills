@@ -21,6 +21,9 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 from collections import Counter
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 
 def load_json(path: str) -> Any:
@@ -326,6 +329,7 @@ def generate_next_steps(report: Dict[str, Any]) -> str:
     return section
 
 
+@log_execution
 def main():
     parser = argparse.ArgumentParser(
         description="Generate markdown performance benchmark report"

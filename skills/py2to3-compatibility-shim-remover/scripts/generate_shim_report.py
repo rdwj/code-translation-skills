@@ -22,6 +22,9 @@ from typing import Dict, List, Any
 from datetime import datetime
 from collections import defaultdict
 
+import sys; sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parents[3] / 'scripts' / 'lib'))
+from migration_logger import setup_logging, log_execution
+logger = setup_logging(__name__)
 
 # ── Helper Functions ──────────────────────────────────────────────────────────
 
@@ -467,6 +470,7 @@ If the automated remover missed some six usage:
     return md
 
 
+@log_execution
 def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(
