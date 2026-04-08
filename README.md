@@ -102,7 +102,7 @@ All code-generating skills accept a `--target-version` parameter (3.9, 3.11, 3.1
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-org/code-translation-skills.git
+git clone https://github.com/redhat-ai-americas/code-translation-skills.git
 cd code-translation-skills
 
 # Install all 27 skills to ~/.claude/skills/ (global)
@@ -199,4 +199,4 @@ Reference documents (encoding patterns, syntax change catalogs, test vectors, et
 
 ## License
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE)
