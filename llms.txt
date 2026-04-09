@@ -1,0 +1,51 @@
+# py2to3 Migration Skill Suite
+
+> A suite of 27 Claude skills that guide large-scale Python 2 to Python 3 migrations through a six-phase pipeline (Discovery → Foundation → Mechanical → Semantic → Verification → Cutover), with explicit gate criteria between phases and rollback procedures at every phase.
+
+The suite is built on the skill-creator framework. Each skill is a self-contained unit an AI agent can load to perform a specific migration task. Skills produce structured JSON output and human-readable markdown reports. All code-generating skills accept a `--target-version` parameter (3.9, 3.11, 3.12, 3.13). Documentation is split across four sibling top-level directories so `docs/` stays unambiguously user-facing — planning, research, and retrospective material live in siblings.
+
+## Start here
+
+- [README.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/README.md): project overview, skill catalog by phase, install instructions
+- [GETTING-STARTED.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/GETTING-STARTED.md): quick-start walkthrough, handoff prompt pattern, suggested prompts
+- [docs/README.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/docs/README.md): user-facing documentation index
+
+## Architecture and strategy
+
+- [docs/MIGRATION-GUIDE.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/docs/MIGRATION-GUIDE.md): practitioner's guide — the "why" behind the six-phase approach, bytes/str boundaries, dependency ordering, phased rollback
+- [docs/SCALE-PLAYBOOK.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/docs/SCALE-PLAYBOOK.md): how to adjust the workflow for small, medium, large, and very large codebases
+- [planning/PLAN.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/planning/PLAN.md): authoritative specification for all 27 skills — inputs, outputs, capabilities, gate criteria, rollback procedures
+- [planning/ARCHITECTURE-universal-code-graph.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/planning/ARCHITECTURE-universal-code-graph.md): design for the next-generation language-agnostic code graph layer (aspirational, not shipped)
+
+## Reference material
+
+- [docs/references/python-migration/](https://github.com/redhat-ai-americas/code-translation-skills/tree/main/docs/references/python-migration): 11 technical reference catalogs consumed by the skills — Py2/Py3 syntax and semantic changes, bytes/str patterns, industrial encodings, SCADA protocols, stdlib removals by version, serialization migration, hypothesis test strategies, encoding test vectors, sub-agent guide
+- [docs/references/python-migration/py2-py3-syntax-changes.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/docs/references/python-migration/py2-py3-syntax-changes.md): mechanical syntax transforms — print, exceptions, imports, dict methods
+- [docs/references/python-migration/py2-py3-semantic-changes.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/docs/references/python-migration/py2-py3-semantic-changes.md): semantic divergences that survive mechanical conversion
+- [docs/references/python-migration/bytes-str-patterns.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/docs/references/python-migration/bytes-str-patterns.md): bytes/str boundary patterns — the hardest part of any Py2→3 migration
+- [docs/references/python-migration/SUB-AGENT-GUIDE.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/docs/references/python-migration/SUB-AGENT-GUIDE.md): conventions for skills that delegate to sub-agents
+
+## Skills
+
+- [skills/](https://github.com/redhat-ai-americas/code-translation-skills/tree/main/skills): 27 skills organized across six migration phases plus orchestration. Each skill has a `SKILL.md` (metadata + instructions), `scripts/` (Python implementations), and `references/INDEX.md` (pointers to shared reference files)
+- [scripts/install-skills.sh](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/scripts/install-skills.sh): installer that copies skills into `~/.claude/skills/` or a project's `.claude/skills/`
+
+## Planning and in-flight work
+
+- [planning/](https://github.com/redhat-ai-americas/code-translation-skills/tree/main/planning): in-flight designs, authoritative spec, backlog, architecture proposals, and the agent-kit generalization ideation cluster
+- [planning/BACKLOG.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/planning/BACKLOG.md): canonical remaining-work list organized by section — sanitization, skill agents, Java support, tree-sitter queries, integration testing
+- [planning/SKILL-UPDATE-PLAN.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/planning/SKILL-UPDATE-PLAN.md): staged rollout plan for updating existing skills to match the universal-code-graph architecture
+- [planning/agent-kit-generalization/](https://github.com/redhat-ai-americas/code-translation-skills/tree/main/planning/agent-kit-generalization): ideation notes for generalizing the suite beyond py2to3 to a language-agnostic migration agent kit
+
+## Research and history
+
+- [research/](https://github.com/redhat-ai-americas/code-translation-skills/tree/main/research): investigation notes, original build history, and research stubs
+- [research/process/](https://github.com/redhat-ai-americas/code-translation-skills/tree/main/research/process): the original build artifacts — build tracker, exploration chat log, review prompts and review report from the suite's construction
+- [research/framing-and-bounding/](https://github.com/redhat-ai-americas/code-translation-skills/tree/main/research/framing-and-bounding): research stub on the thesis that agents need explicit framing + bounding to handle source → target translations cleanly
+- [retrospectives/](https://github.com/redhat-ai-americas/code-translation-skills/tree/main/retrospectives): post-hoc session writeups
+
+## Optional
+
+- [CONTRIBUTING.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/CONTRIBUTING.md): contribution guidelines
+- [SECURITY.md](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/SECURITY.md): security policy
+- [LICENSE](https://github.com/redhat-ai-americas/code-translation-skills/blob/main/LICENSE): Apache 2.0
