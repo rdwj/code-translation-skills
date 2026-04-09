@@ -144,7 +144,7 @@ Reference documents (encoding patterns, syntax change catalogs, test vectors, et
 |----------|-------------|
 | [Getting Started](GETTING-STARTED.md) | Quick start guide, handoff prompt pattern, and suggested prompts |
 | [Scale Playbook](docs/SCALE-PLAYBOOK.md) | How to adjust the workflow for small, medium, large, and very large codebases |
-| [PLAN.md](PLAN.md) | Authoritative specification for all 27 skills — inputs, outputs, capabilities, gate criteria, rollback procedures |
+| [PLAN.md](planning/PLAN.md) | Authoritative specification for all 27 skills — inputs, outputs, capabilities, gate criteria, rollback procedures |
 | [Migration Guide](docs/MIGRATION-GUIDE.md) | Practitioner's guide to the "why" behind the migration approach — read this first for strategic context |
 | [docs/process/](docs/process/) | Build history: tracker, review reports, exploration chat log, prompt templates |
 
@@ -154,19 +154,26 @@ Reference documents (encoding patterns, syntax change catalogs, test vectors, et
 .
 ├── README.md
 ├── LICENSE
-├── PLAN.md
 ├── GETTING-STARTED.md
 ├── scripts/
 │   └── install-skills.sh
 ├── docs/
+│   ├── README.md
 │   ├── MIGRATION-GUIDE.md
 │   ├── SCALE-PLAYBOOK.md
-│   └── process/
-│       ├── BUILD-TRACKER.md
-│       ├── EXPLORATION-CHAT.md
-│       ├── NEXT-CHAT-PROMPT.md
-│       ├── REVIEW-PROMPT.md
-│       └── REVIEW-REPORT.md
+│   └── references/
+│       └── python-migration/
+├── planning/
+│   ├── PLAN.md
+│   ├── BACKLOG.md
+│   ├── SKILL-UPDATE-PLAN.md
+│   ├── ARCHITECTURE-universal-code-graph.md
+│   ├── SCRIPT-OFFLOAD-PLAN.md
+│   └── agent-kit-generalization/
+├── research/
+│   ├── process/
+│   └── framing-and-bounding/
+├── retrospectives/
 └── skills/
     ├── py2to3-automated-converter/
     ├── py2to3-behavioral-diff-generator/

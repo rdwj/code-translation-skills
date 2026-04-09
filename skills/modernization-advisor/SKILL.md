@@ -263,7 +263,7 @@ a rewrite that changes the contract — that's a redesign, not a modernization.
 ## References
 
 - `behavioral-contract-extractor` — Produces the behavioral contracts this skill consumes
-- `ARCHITECTURE-universal-code-graph.md` — Describes the code graph system and language ecosystem
+- `planning/ARCHITECTURE-universal-code-graph.md` — Describes the code graph system and language ecosystem
 - `migration-state-tracker` — Tracks state and consumes opportunity output
 - `migration-dashboard` — Visualizes opportunities for stakeholder review
 - `py2to3-automated-converter` — Can use modernization suggestions to guide translation

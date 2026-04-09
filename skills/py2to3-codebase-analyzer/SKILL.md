@@ -460,4 +460,4 @@ When decomposing as sub-agents: spawn Haiku sub-agents for per-file scanning, ag
 ## References
 
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents: prompt injection, context budgeting, parallel execution
-- `ARCHITECTURE-universal-code-graph.md` — Full architecture for the universal code graph system
+- `planning/ARCHITECTURE-universal-code-graph.md` — Full architecture for the universal code graph system

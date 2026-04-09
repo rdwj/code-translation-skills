@@ -4,7 +4,7 @@
 
 This document is a technical design guide for practitioners undertaking a large-scale Python 2 to Python 3 migration. It covers the problem space, the strategic approach, and the reasoning behind the decisions that shape a successful migration project. It is not a tutorial or a step-by-step walkthrough. It assumes you understand Python and are familiar with the general contours of the Py2/Py3 divide.
 
-The companion document, [PLAN.md](../PLAN.md), contains the detailed specifications for the migration skills organized across six phases, including inputs, outputs, gate criteria, and rollback procedures for each. This guide is the "why" -- PLAN.md is the "what." Read this document first to understand the problem space and strategic thinking, then use PLAN.md as the operational reference.
+The companion document, [PLAN.md](../planning/PLAN.md), contains the detailed specifications for the migration skills organized across six phases, including inputs, outputs, gate criteria, and rollback procedures for each. This guide is the "why" -- PLAN.md is the "what." Read this document first to understand the problem space and strategic thinking, then use PLAN.md as the operational reference.
 
 The guide is written to be generic. While examples draw from industrial contexts (SCADA systems, mainframe data, CNC automation) to illustrate the kinds of complexity that arise in long-lived codebases, the principles and approach apply to any large-scale Py2-to-Py3 migration. A web application migration will encounter fewer encoding exotics but the same structural challenges: dependency ordering, bytes/string boundaries, serialization compatibility, and the need for phased rollback.
 
@@ -1443,7 +1443,7 @@ This is illustrative, not prescriptive. Real timelines depend on the codebase's 
 
 ## 12. References
 
-The detailed specifications for all 26 skills -- including inputs, outputs, capabilities, gate criteria, and rollback procedures -- are in [PLAN.md](../PLAN.md).
+The detailed specifications for all 26 skills -- including inputs, outputs, capabilities, gate criteria, and rollback procedures -- are in [PLAN.md](../planning/PLAN.md).
 
 PLAN.md also defines 12 shared reference documents that provide the domain knowledge skills need to operate. These include:
 

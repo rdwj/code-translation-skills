@@ -364,4 +364,4 @@ When used as infrastructure for other skills (e.g., behavioral-contract-extracto
 - `references/tree-sitter-query-syntax.md` — S-expression query language reference
 - `references/adding-a-language.md` — How to add support for a new language
 - `references/supported-languages.md` — Full list of tree-sitter-language-pack grammars
-- `ARCHITECTURE-universal-code-graph.md` — Detailed architecture with code sketches
+- `planning/ARCHITECTURE-universal-code-graph.md` — Detailed architecture with code sketches

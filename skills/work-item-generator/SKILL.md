@@ -563,7 +563,7 @@ This creates a safe testing loop for routing rules.
 
 ## References
 
-- `ARCHITECTURE-universal-code-graph.md` — Dependency graph structure and call graphs
+- `planning/ARCHITECTURE-universal-code-graph.md` — Dependency graph structure and call graphs
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work items to sub-agents
 - Behavioral contract extractor SKILL.md — Inferring per-function specifications
 - Conversion unit planner SKILL.md — Planning conversion order and unit formation

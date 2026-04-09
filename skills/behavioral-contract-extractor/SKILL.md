@@ -234,5 +234,5 @@ Decomposition: Haiku extracts function signatures, docstrings, parameter types, 
 
 ## References
 
-- `ARCHITECTURE-universal-code-graph.md` — Behavioral Analysis & Verification section
+- `planning/ARCHITECTURE-universal-code-graph.md` — Behavioral Analysis & Verification section
 - `references/SUB-AGENT-GUIDE.md` — How to delegate work to sub-agents
