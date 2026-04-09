@@ -140,12 +140,22 @@ Reference documents (encoding patterns, syntax change catalogs, test vectors, et
 
 ## Documentation
 
+Start at [docs/README.md](docs/README.md) for the user-facing documentation index. The most important entry points:
+
 | Document | Description |
 |----------|-------------|
 | [Getting Started](GETTING-STARTED.md) | Quick start guide, handoff prompt pattern, and suggested prompts |
+| [Migration Guide](docs/MIGRATION-GUIDE.md) | Practitioner's guide to the "why" behind the migration approach — read this first for strategic context |
 | [Scale Playbook](docs/SCALE-PLAYBOOK.md) | How to adjust the workflow for small, medium, large, and very large codebases |
 | [PLAN.md](planning/PLAN.md) | Authoritative specification for all 27 skills — inputs, outputs, capabilities, gate criteria, rollback procedures |
-| [Migration Guide](docs/MIGRATION-GUIDE.md) | Practitioner's guide to the "why" behind the migration approach — read this first for strategic context |
+| [docs/references/python-migration/](docs/references/python-migration/) | Technical reference catalogs: syntax changes, bytes/str patterns, encodings, SCADA protocols, serialization, test vectors |
+
+Project documentation is organized into four sibling top-level directories so `docs/` stays unambiguously user-facing:
+
+- **[docs/](docs/)** — shipped user-facing reference (you start here)
+- **[planning/](planning/)** — in-flight designs, the PLAN.md spec, backlog, and agent-kit generalization notes
+- **[research/](research/)** — original build history, review prompts, exploration chat log, and research stubs
+- **[retrospectives/](retrospectives/)** — post-hoc session writeups
 
 ## Project Structure
 
