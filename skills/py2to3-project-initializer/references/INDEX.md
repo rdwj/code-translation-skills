@@ -1,7 +1,7 @@
 # Reference Index — py2to3-project-initializer
 
 ## Shared References
-- [SUB-AGENT-GUIDE.md](../../../docs/references/shared/SUB-AGENT-GUIDE.md) — Shared migration reference
+- [SUB-AGENT-GUIDE.md](../../../docs/references/python-migration/SUB-AGENT-GUIDE.md) — Shared migration reference
 
 ## Skill-Specific References
 - [HANDOFF-PROMPT-GUIDE.md](./HANDOFF-PROMPT-GUIDE.md) — py2to3-project-initializer-specific reference

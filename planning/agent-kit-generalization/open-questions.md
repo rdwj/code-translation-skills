@@ -27,7 +27,7 @@ Updated 2026-04-08 after the framing reset and OpenRewrite research.
    - Private archive only
    - **Leaning toward:** public peer repo with a clear README explaining it's a posterity archive and pointing to the new kit. Preserves visibility of the good ideas for anyone who finds it.
 
-3. **How much of `code-translation-skills/docs/references/shared/` gets copied forward?** The Py2→3 syntax and semantic change catalogs, the bytes/str patterns reference, the SUB-AGENT-GUIDE — these are codified expert knowledge worth preserving verbatim in the new kit's `references/` directory.
+3. **How much of `code-translation-skills/docs/references/python-migration/` gets copied forward?** The Py2→3 syntax and semantic change catalogs, the bytes/str patterns reference, the SUB-AGENT-GUIDE — these are codified expert knowledge worth preserving verbatim in the new kit's `references/` directory.
 
 ## Blocking for Milestone 1 (Java discovery end-to-end)
 

@@ -15,7 +15,7 @@ If an agent drifts from the "prescribed process," either (a) the process was wro
 ## What to keep from the old project
 
 - **Domain insights** captured in skill descriptions (what does "Phase 4 Verification" mean, what are the gate criteria for Phase 2→3, what's the bytes/string problem really about)
-- **Reference documents** in `docs/references/shared/` (Py2→3 syntax changes, semantic changes, bytes/str patterns — these are codified expert knowledge)
+- **Reference documents** in `docs/references/python-migration/` (Py2→3 syntax changes, semantic changes, bytes/str patterns — these are codified expert knowledge)
 - **Behavioral contract concept** (the idea, not the current implementation)
 - **Workspace peer-directory strategy** (still correct)
 - **Migration dashboard HTML** (the visual design works)

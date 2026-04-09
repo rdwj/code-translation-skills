@@ -396,7 +396,7 @@ Deep review of all scripts and skills identified 5 additional optimization oppor
 
 | # | What | Status | Notes |
 |---|------|--------|-------|
-| R5-1 | Reference file deduplication | COMPLETE | Consolidated 47 duplicate copies of 11 files to `docs/references/shared/`, created 27 INDEX.md pointers, removed 22,946 lines |
+| R5-1 | Reference file deduplication | COMPLETE | Consolidated 47 duplicate copies of 11 files to `docs/references/python-migration/`, created 27 INDEX.md pointers, removed 22,946 lines |
 | R5-2 | analyze_universal.py orchestrator | COMPLETE | Chains language_detect → ts_parser → universal_extractor → graph_builder into single CLI call with regex fallback |
 | R5-3 | Phase runner scripts (7 scripts) | COMPLETE | phase0-phase5 runners + run_express.py eliminate LLM orchestration between skills |
 | R5-4 | Trim oversized SKILL.md files | COMPLETE | Top 5 files trimmed from avg 595 → avg 257 lines; examples extracted to references/EXAMPLES.md |
@@ -408,11 +408,11 @@ Deep review of all scripts and skills identified 5 additional optimization oppor
 
 | File | Copies Found | Shared Location |
 |------|-------------|-----------------|
-| SUB-AGENT-GUIDE.md | 8 | docs/references/shared/ |
-| py2-py3-semantic-changes.md | 6 | docs/references/shared/ |
-| py2-py3-syntax-changes.md | 5 | docs/references/shared/ |
-| bytes-str-patterns.md | 4 | docs/references/shared/ |
-| + 7 more files | various | docs/references/shared/ |
+| SUB-AGENT-GUIDE.md | 8 | docs/references/python-migration/ |
+| py2-py3-semantic-changes.md | 6 | docs/references/python-migration/ |
+| py2-py3-syntax-changes.md | 5 | docs/references/python-migration/ |
+| bytes-str-patterns.md | 4 | docs/references/python-migration/ |
+| + 7 more files | various | docs/references/python-migration/ |
 
 ### R5-3: Phase Runner Scripts
 
