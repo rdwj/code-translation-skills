@@ -19,7 +19,7 @@ Before starting the new repo, preserve the current state.
 1. Create peer repo (suggested name: `code-translation-skills-v1-archive` or similar)
 2. Push current `main` branch to the archive repo
 3. Leave `code-translation-skills` directory as-is locally; treat it as read-only reference while building the new kit
-4. Document the archive in a top-level `ARCHIVE.md` in the current repo explaining the decision, the key insights preserved in `ideas/agent-kit-generalization/`, and pointing at the new repo once it exists
+4. Document the archive in a top-level `ARCHIVE.md` in the current repo explaining the decision, the key insights preserved in `planning/agent-kit-generalization/`, and pointing at the new repo once it exists
 
 ## New repo setup (Milestone 0)
 
@@ -50,7 +50,7 @@ Stand up the new kit's repository:
   ├── docs/                  # user-facing kit documentation
   └── examples/              # small reference codebases per profile for testing
   ```
-- Commit the `ideas/agent-kit-generalization/` notes into the new repo as the design origin
+- Commit the `planning/agent-kit-generalization/` notes into the new repo as the design origin
 
 ## Build milestones
 
