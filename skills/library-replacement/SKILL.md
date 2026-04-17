@@ -27,7 +27,7 @@ model_tier: haiku
 
 Identifies imports in a codebase that need replacement for a given migration,
 and advises on what to replace them with. Works for any source->target pair
-that has a mapping file in `mappings/`.
+that has a mapping file in `skills/library-replacement/mappings/`.
 
 ## When to Use
 
@@ -76,7 +76,7 @@ The `attrs.module` field is the key for matching against the mapping file.
 
 ### Step 3: Load the mapping file
 
-Load `mappings/<migration_pair>.yaml`. The mapping file declares the
+Load `skills/library-replacement/mappings/<migration_pair>.yaml`. The mapping file declares the
 source/target migration pair and a dictionary of module replacements.
 
 ### Step 4: Match imports against the mapping
@@ -160,7 +160,7 @@ The skill succeeded if:
 
 ## Mapping File Format
 
-Mapping files live in `mappings/` and use YAML. Each file defines replacements
+Mapping files live in `skills/library-replacement/mappings/` and use YAML. Each file defines replacements
 for one source->target migration pair.
 
 ### Top-level fields
@@ -260,7 +260,7 @@ cStringIO:
 
 To support a new migration pair:
 
-1. Create `mappings/<id>.yaml` following the format above
+1. Create `skills/library-replacement/mappings/<id>.yaml` following the format above
 2. Populate the `migration` header with source/target metadata
 3. Choose `match_strategy` based on the language's import model:
    - `exact` for flat namespaces (Python, Ruby, Go)
@@ -276,5 +276,5 @@ To support a new migration pair:
 
 ## References
 
-- `mappings/py2to3.yaml` — Full Python 2->3 stdlib replacement mapping
-- `mappings/java8to17.yaml` — Java 8->17 Jakarta EE + JDK removal mapping (starter)
+- `skills/library-replacement/mappings/py2to3.yaml` — Full Python 2->3 stdlib replacement mapping
+- `skills/library-replacement/mappings/java8to17.yaml` — Java 8->17 Jakarta EE + JDK removal mapping (starter)
