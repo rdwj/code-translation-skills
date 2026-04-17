@@ -1,85 +1,87 @@
 # Foundation Tool Feedback
 
-Observations from running all four tools during the M0 spec schema session (2026-04-09). Each tool was run against real codebases: jsoup (Java, 91 files) and python-dateutil (Python, 17 files). All LLM-powered features used Granite 3.3 8b via local Ollama.
+Observations from running all four tools across four test rounds against real codebases: jsoup (Java, 91 files) and python-dateutil (Python, 17 files). All LLM-powered features used Granite 3.3 8b via local Ollama.
 
-## treeloom 0.4.0
+**Version history:**
+- Round 1 (2026-04-09): treeloom 0.4.0, greploom pre-0.3.1, sanicode 0.10.0, veripak 0.3.1
+- Round 2 (2026-04-10 AM): treeloom 0.7.0, greploom 0.3.1, sanicode 0.12.0, veripak 0.6.0
+- Round 3 (2026-04-10 PM): treeloom 0.8.0, greploom 0.4.0, sanicode 0.12.1, veripak 0.6.1
+- Round 4 (2026-04-17): treeloom 0.9.0, greploom 0.4.0, sanicode 0.12.3, veripak 0.6.3
 
-**What worked well:**
-- Build is fast: 91 Java files parsed in 0.3s, CPG built in 2.3s
-- Call resolution is excellent for Java (85%, 5614/6564 calls resolved)
-- Subgraph extraction (`treeloom subgraph --function "clean"`) gives a focused view with 2-hop context
-- Edge queries are powerful: `treeloom edges --kind calls --target "^clean$"` finds all callers
-- Parameter type annotations are preserved: `dirtyDocument: Document` (position 0)
-- Data flow edges trace parameter → call → variable → return cleanly
+Round 4 was driven by the `discover` skill build (M1). Issues found during integration were filed and fixed same-day.
 
-**Issues / improvement opportunities:**
-- Python call resolution is notably lower (34% vs 85% for Java). Dynamic dispatch and duck typing are the likely cause, but this means the spec for Python codebases will have more gaps in the structural layer.
-- Edge queries don't include file/line on the source/target nodes (shows `?:?`). The node IDs contain the file path, but having file:line in the edge output would save a round-trip query.
-- `treeloom config --set` rejects unknown keys silently — no error, just "Unknown config key: llm.provider". This is fine since treeloom has no LLM integration, but a user trying to configure it might be confused. A hint like "treeloom does not use LLM configuration; see greploom for semantic search" would help.
-- `treeloom config --init` creates `.treeloom.yaml` in CWD with no warning. If you're in the wrong directory, this leaves a config file in an unexpected place. We accidentally created one in the code-translation-skills repo root and had to clean it up.
-- The node ID format (`function:/absolute/path/to/file.java:58:4:16518`) embeds absolute paths. This makes IDs unstable across machines. For the spec's `node_ref` field, this is workable (the spec is generated per-machine), but it means specs aren't portable without path remapping. Consider a relative-path option for node IDs.
+## treeloom 0.9.0
 
-**Spec integration notes:**
-- The CPG's node hierarchy (module → class → function) maps directly to the spec's `elements` hierarchy. The `discover` skill can walk the CPG and create stub elements for every node.
-- The `contains` edges give parent→child relationships needed for the spec's `parent` field.
-- The `calls` edges are the basis for `usage_paths` in the spec.
+**Status: All prior feedback addressed. No remaining issues.**
 
-## greploom (latest)
+Everything works well: fast builds, high Java call resolution (82%, 5688/6889), source text embedding, edge queries, subgraph extraction.
 
-**What worked well:**
-- Semantic queries found the right code: "HTML sanitization and XSS prevention" surfaced `Cleaner`, `clean()`, `Safelist`, `isValid()` — all the security-critical components.
-- Graph-aware context expansion: results include not just the hit but callers, parameters, and containing classes. This is exactly what a spec-extraction agent needs.
-- Index build is fast (2389 nodes for jsoup, 372 for dateutil).
-- The `--tier enhanced` option with Granite embeddings works well for domain-specific queries.
+Round 3 additions (0.8.0):
+- `--relative-root DIR` makes node IDs portable.
+- Edge JSON output now includes `file` and `line` on both source and target nodes.
+- CPG is richer: jsoup went from 19981 nodes / 53517 edges to 22388 / 59546.
 
-**Issues / improvement opportunities:**
-- The JSON output for query results doesn't include the source text or Javadoc/docstrings. The `text` field contains a formatted summary like `"## hit: function clean (...)"` but not the actual source code or documentation. A `--include-source` option that includes the raw source lines would help extraction agents.
-- No way to query "show me everything greploom knows about this specific CPG node ID." The query interface is text-based semantic search, but sometimes the agent already knows the node and just wants context expansion. A `--node <node_id>` query mode would complement the text search.
-- The embedding model isn't shown in the output. When reviewing results, it's useful to know which model produced the embeddings. A `--show-model` or metadata in the JSON output would help.
+Round 4 additions (0.9.0):
+- **Massive build speedup.** jsoup (91 Java files) builds in 1.5s, down from 8-9 minutes in 0.8.1. dateutil (17 Python files) builds in 0.5s, down from ~2 minutes. Node/edge counts are identical — the speedup is purely in the build pipeline.
+- **`edges` command no longer truncated.** Previously returned at most ~50 edges silently; now returns the full set (7588 contains edges for dateutil, 20205 for jsoup). Filed as rdwj/treeloom#98, fixed same-day.
+- **`query --json` now includes `scope`, `end_line`, `end_column`.** Previously flattened these out, making the query output structurally different from the raw CPG JSON. Filed as rdwj/treeloom#99, fixed same-day. The `scope` field gives direct parent linkage without needing to traverse `contains` edges; `end_line` enables accurate function line range resolution.
 
-**Spec integration notes:**
-- Greploom is an extraction-time tool, not a spec artifact. Its output isn't stored in the spec; it's used by extraction agents to find relevant code and then populate the spec.
-- The `discover` skill should build the greploom index alongside the CPG so subsequent extraction skills can query it.
+Remaining low-priority items:
+- Python call resolution is still 34% vs 82% for Java. Expected due to dynamic dispatch.
+- `treeloom config --init` creates `.treeloom.yaml` in CWD without confirmation. Minor UX nit.
 
-## sanicode 0.10.0
+## greploom 0.4.0
 
-**What worked well:**
-- Findings are rich: CWE ID, severity, compliance cross-references (OWASP ASVS, NIST 800-53, ASD STIG, PCI DSS), and LLM-generated remediation.
-- The output maps directly to the spec schema's `security_findings` format with minimal transformation.
-- The knowledge graph stats (nodes, edges, entry points, sinks, sanitizers) are useful metadata for the spec.
-- Config via `sanicode config set` with dotted paths is clean and scriptable.
-- The three-tier LLM config (fast/analysis/reasoning) allows tuning model usage per task.
-- LLM-generated remediation is context-specific ("Modify the 'month' function to include an action when a KeyError occurs") — not generic boilerplate.
+**Status: All prior feedback addressed. No remaining issues.**
 
-**Issues / improvement opportunities:**
-- **Java support is missing.** Filed as redhat-ai-americas/code-translation-skills#31. The roadmap notes "use Semgrep until sanicode adds Java."
-- Scanning the full dateutil codebase (17 files) timed out after 3+ minutes. Scanning just the `parser/` subdirectory (3 files) completed in ~2 seconds. The bottleneck appears to be LLM calls — each finding triggers analysis and remediation generation via Granite 3.3 8b locally. For large codebases, this will be slow. Consider: batch LLM calls, or offer a `--no-llm` mode that produces findings without LLM-generated remediation (the rule-based findings + compliance mappings are still valuable).
-- The `sanicode.toml` config file is created in CWD. When running `sanicode config set` from the wrong directory, the config ends up in an unexpected place. We created one in the code-translation-skills repo root and had to move it. Consider a `--config <path>` flag on `config set` or default to `~/.config/sanicode/config.toml` for global config.
-- The `--skip-content-policy` flag was needed to avoid even longer scan times. Document what content policy scanning does and when it's safe to skip.
-- CWE-913 findings (lines 223, 1429, 1433, 1440) had empty `cwe_name`, `compliance`, and `remediation` fields. The rule matched, but the enrichment pipeline didn't fill in the details. These findings are from SC050 which seems less mature than SC059/SC062.
+Semantic search, graph-aware context, embeddings — all working well.
 
-**Spec integration notes:**
-- Each finding's `file` and `line` can be resolved to a CPG node ID by querying `treeloom query --kind function --file <file> --json` and finding the containing function. The `discover` skill should do this resolution to populate the `node_ref` field.
-- The `derived_severity` field (sanicode's adjusted severity after LLM analysis) is more useful than the raw `severity` for the spec. Use `derived_severity` when populating the spec.
+Round 3 additions:
+- `--node` direct lookup and `--include-source` both confirmed working in 0.4.0.
+- JSON output now wraps in `{"metadata": {...}, "results": [...]}` instead of a bare list. Not a bug — just a structural change the skill needs to handle.
 
-## veripak 0.3.1
+Remaining low-priority item:
+- Embedding model name isn't shown in query output. Would help with reproducibility.
 
-**What worked well:**
-- Package audit is comprehensive: version tracking, CVE inventory (from OSV + NVD), EOL status, and LLM-generated migration recommendations.
-- The output maps directly to the spec schema's `ecosystem_dependencies` format.
-- Works for both Python (PyPI) and Java (Maven Central) ecosystems.
-- The LLM-generated `summary.recommendation` field is actionable: "Immediate action is required. Migration to jsoup 1.21.1 is imperative."
-- Cost tracking (`_usage` field) shows token counts and estimated cost per audit.
+## sanicode 0.12.3
 
-**Issues / improvement opportunities:**
-- The `org.jsoup:jsoup` Maven coordinate format only resolved to version 1.15.4, while the simple `jsoup` name resolved to 1.21.1. The Maven Central API query for coordinates seems to hit a different search endpoint that returns stale data. This matters because the `discover` skill will extract coordinates from `pom.xml`.
-- The CVE agent hallucinated a CVE for the Maven coordinate query: CVE-2015-3117 is actually an Adobe Flash vulnerability, not a jsoup vulnerability. Granite 3.3 8b is too small for reliable CVE attribution. Consider: cross-validating CVE IDs against the actual OSV/NVD response before including them, or flagging LLM-sourced CVEs as `confidence: low`.
-- When ecosystem is auto-inferred without the `-e` flag, `jsoup` was detected as a Python package (there is a `jsoup` on PyPI, different project). The `-e` flag should probably be required when there's ambiguity, or veripak should warn when a package exists in multiple ecosystems.
-- The `eol` field often returns `confidence: low` with `project_status: unknown`. The endoflife.date API doesn't cover most libraries — only major runtimes and frameworks. Consider documenting this limitation or falling back to "last release date" heuristics (e.g., if the last release was 3+ years ago, flag it).
-- The interactive `veripak config` wizard doesn't support non-interactive configuration. For the `discover` skill, we need to configure veripak programmatically. The config file at `~/.config/veripak/config.json` works, but a `veripak config set <key> <value>` command (like sanicode has) would be cleaner.
-- The `_agent.attempts` and `_agent.errors` fields in the output are useful for debugging but should probably be behind a `--verbose` flag rather than always included.
+**Status: All blockers resolved.**
 
-**Spec integration notes:**
-- The `discover` skill should parse dependency manifests (pom.xml, requirements.txt, pyproject.toml) to extract package names and versions, then run veripak on each.
-- Use veripak's `summary.urgency` field directly as the spec's `urgency` enum value.
-- Cross-validate CVE IDs from veripak against the raw OSV/NVD sources before marking them as `confidence: high` in the spec.
+Round 3 fixes confirmed (0.12.1):
+- `--cwe` filter now works correctly. `--cwe 913` returns 9 findings (all CWE-913), not all 53.
+- `config set scan.include_extensions ".py,.java,.js"` now works and writes a proper TOML array.
+
+Round 4 fixes (0.12.2 → 0.12.3):
+- **Java scanning performance fixed (0.12.2).** The Round 3 blocker — jsoup full codebase (91 files) not completing in 10+ minutes — is resolved. Full scan now completes in ~12s with `--no-llm`, producing 221 findings. Scaling is roughly linear.
+- **`-o` flag now writes a file (0.12.3).** Previously, `-o sanicode-result.json` with `-f json` created a directory instead of a file. Filed as rdwj/sanicode#242, fixed same-day. Stdout redirect is no longer needed as a workaround.
+
+Working well:
+- 826 rules across 22 languages. Java has 76 rules.
+- `--no-llm` mode: Python 17 files → 53 findings in ~2s; Java 91 files → 221 findings in ~12s.
+- LLM enrichment on small scopes works (7 findings in 67.6s for dateutil/parser/).
+- Compliance and remediation fields populated for all rule types.
+
+### Minor: Severity aggregation inconsistency (still present)
+
+The summary's `by_severity` uses `derived_severity`, but individual findings carry a separate `severity` field. The `discover` skill's assemble.py prefers `derived_severity` when available.
+
+## veripak 0.6.3
+
+**Status: All prior feedback addressed. No remaining issues that need package fixes.**
+
+Round 3 fix confirmed (0.6.1):
+- Ambiguous ecosystem now errors: `jsoup` without `-e` returns "exists in multiple ecosystems: python, javascript, dotnet, java. Please specify -e." Previously silently picked Python.
+
+Round 4 fix (0.6.3):
+- **`veripak_version` field added to JSON output.** Previously missing, making provenance tracking impossible without out-of-band recording. Filed as rdwj/veripak#27, fixed same-day.
+
+Everything else working well:
+- `config set/get/list` works correctly
+- Maven coordinates resolve correctly (`org.jsoup:jsoup` → 1.22.1)
+- CVE hallucination addressed via HITL drop mechanism
+- `json_mode` support improves structured output quality
+
+Remaining items (skill-level workarounds, all handled by assemble.py):
+- Version discrepancy between `jsoup` (1.21.1) and `org.jsoup:jsoup` (1.22.1). Different data sources. Skill prefers Maven coordinate format for Java.
+- `urgency: high` for python-dateutil despite 0 CVEs. LLM factors in EOL uncertainty. Skill passes through unchanged.
+- Sparse summary fields (`_gaps`). Null-checked in assemble.py.
